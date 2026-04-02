@@ -12,10 +12,10 @@ import {
   saveData,
   normalizeData,
   getUserNames,
+  getMonthAttendanceSummary,
+  getMonthLabel,
   isRegisteredUser,
-  getCurrentDayNumber,
   getTodayStr,
-  getTotalDays,
 } from "./utils/storage";
 import { getUserProfile } from "./data/userProfiles";
 import { isFirebaseReady, saveToFirebase, subscribeToFirebase } from "./utils/firebase";
@@ -164,12 +164,14 @@ export default function App() {
   );
 
   const today = getTodayStr();
-  const totalDays = getTotalDays();
-  const dayNumber = Math.min(Math.max(getCurrentDayNumber(), 1), totalDays);
-  const challengeProgress = Math.min(Math.max((dayNumber / totalDays) * 100, 0), 100);
   const users = Object.values(visibleData);
   const todayCheckIns = users.filter((user) => user.gymDays[today]).length;
   const todayMealLogs = users.reduce((count, user) => count + (user.calories[today] || []).length, 0);
+  const totalMonthlyAttendance = users.reduce(
+    (count, user) => count + getMonthAttendanceSummary(user.gymDays).attendedDays,
+    0
+  );
+  const currentMonthLabel = getMonthLabel();
   const selectedProfile = activeUser ? getUserProfile(activeUser) : null;
 
   const tabs = [
@@ -237,7 +239,7 @@ export default function App() {
                 Gymify
               </MotionH1>
               <span className="hidden rounded-full border border-slate-900/8 bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 sm:inline-flex">
-                Day {dayNumber}/{totalDays}
+                {currentMonthLabel}
               </span>
               {selectedProfile && (
                 <span className="hidden rounded-full border border-slate-900/8 bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 md:inline-flex">
@@ -316,24 +318,31 @@ export default function App() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                60 Day Lean Challenge
+                Calendar Attendance
               </p>
               <h2 className="mt-2 font-display text-2xl font-semibold text-slate-950 dark:text-white">
-                Simple shared tracking for your group
+                Simple shared attendance tracking for your group
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Track one profile at a time, while the leaderboard and graph reflect everyone who
-                has signed up.
+                Track attendance day by day on a real calendar, while meals and leaderboard stats
+                stay synced for everyone who has signed up.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:w-auto">
+            <div className="grid grid-cols-3 gap-2 sm:w-auto">
               <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-4 py-3 dark:border-white/10 dark:bg-white/5">
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Today</p>
                 <p className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
                   {todayCheckIns}/{users.length}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">checked in</p>
+              </div>
+              <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">This month</p>
+                <p className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
+                  {totalMonthlyAttendance}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">attendance marks</p>
               </div>
               <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-4 py-3 dark:border-white/10 dark:bg-white/5">
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Meals</p>
@@ -343,20 +352,6 @@ export default function App() {
                 <p className="text-xs text-slate-500 dark:text-slate-400">meals logged today</p>
               </div>
             </div>
-          </div>
-
-          <div className="mt-4">
-            <div className="h-2 overflow-hidden rounded-full bg-slate-900/8 dark:bg-white/10">
-              <MotionDiv
-                initial={{ width: 0 }}
-                animate={{ width: `${challengeProgress}%` }}
-                transition={{ duration: 0.9, ease: "easeOut" }}
-                className="h-full rounded-full bg-gradient-to-r from-orange-500 via-rose-500 to-sky-500"
-              />
-            </div>
-            <p className="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-              {Math.round(challengeProgress)}% of the challenge completed
-            </p>
           </div>
         </section>
 

@@ -13,10 +13,10 @@ import {
   calculateStreak,
   countTruthyDates,
   getLatestWeight,
+  getMonthAttendanceSummary,
   getRecentDateStrings,
   getTodayCalories,
   getTodayStr,
-  getTotalDays,
   computeBadges,
 } from "../utils/storage";
 
@@ -80,9 +80,8 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
   const latestWeight = getLatestWeight(weights);
   const badges = computeBadges(userData);
   const todayCalories = getTodayCalories(calories);
-  const totalGymDays = Object.values(gymDays).filter(Boolean).length;
-  const progress = Math.min((totalGymDays / getTotalDays()) * 100, 100);
   const weeklyGymDays = countTruthyDates(gymDays, getRecentDateStrings(7));
+  const monthAttendance = getMonthAttendanceSummary(gymDays);
 
   const handleGymToggle = (dateStr) => {
     const newGymDays = { ...gymDays };
@@ -300,11 +299,11 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
           </div>
 
           <ProgressRing
-            progress={progress}
+            progress={monthAttendance.attendanceRate}
             size={60}
             strokeWidth={5}
             colors={profile.ringColors}
-            label={`${Math.round(progress)}%`}
+            label={`${monthAttendance.attendanceRate}%`}
           />
         </div>
       </div>
@@ -331,6 +330,15 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
               this week
             </p>
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+            {monthAttendance.monthLabel}
+          </p>
+          <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-white">
+            {monthAttendance.attendedDays} attendance marks in {monthAttendance.daysElapsed} tracked days
+          </p>
         </div>
 
         <BadgeDisplay badges={badges} />

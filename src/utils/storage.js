@@ -2,6 +2,12 @@ const STORAGE_KEY = "lean-challenge-60day";
 const TOTAL_DAYS = 60;
 const START_DATE = "2026-04-02"; // Challenge start date
 
+function formatDateKey(date) {
+  const safeDate = new Date(date);
+  safeDate.setHours(12, 0, 0, 0);
+  return safeDate.toISOString().split("T")[0];
+}
+
 function getDefaultUserData(name) {
   return {
     name,
@@ -155,11 +161,11 @@ export function getDayNumber(dateStr) {
 export function getDateForDay(dayNumber) {
   const start = new Date(START_DATE);
   start.setDate(start.getDate() + dayNumber - 1);
-  return start.toISOString().split("T")[0];
+  return formatDateKey(start);
 }
 
 export function getTodayStr() {
-  return new Date().toISOString().split("T")[0];
+  return formatDateKey(new Date());
 }
 
 export function getCurrentDayNumber() {
@@ -169,14 +175,62 @@ export function getCurrentDayNumber() {
 export function getRecentDateStrings(days, fromDate = new Date()) {
   const dates = [];
   const anchor = new Date(fromDate);
+  anchor.setHours(12, 0, 0, 0);
 
   for (let index = days - 1; index >= 0; index -= 1) {
     const current = new Date(anchor);
     current.setDate(anchor.getDate() - index);
-    dates.push(current.toISOString().split("T")[0]);
+    dates.push(formatDateKey(current));
   }
 
   return dates;
+}
+
+export function getMonthLabel(date = new Date(), locale = "en-US") {
+  return new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(date));
+}
+
+export function getMonthDateStrings(date = new Date()) {
+  const anchor = new Date(date);
+  anchor.setHours(12, 0, 0, 0);
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  return Array.from({ length: daysInMonth }, (_, index) =>
+    formatDateKey(new Date(year, month, index + 1, 12))
+  );
+}
+
+export function getMonthAttendanceSummary(record, date = new Date()) {
+  const anchor = new Date(date);
+  anchor.setHours(12, 0, 0, 0);
+
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+
+  const isCurrentMonth =
+    today.getFullYear() === year &&
+    today.getMonth() === month;
+
+  const daysElapsed = isCurrentMonth ? today.getDate() : new Date(year, month + 1, 0).getDate();
+  const dateStrings = Array.from({ length: daysElapsed }, (_, index) =>
+    formatDateKey(new Date(year, month, index + 1, 12))
+  );
+  const attendedDays = countTruthyDates(record || {}, dateStrings);
+  const attendanceRate = daysElapsed > 0 ? Math.round((attendedDays / daysElapsed) * 100) : 0;
+
+  return {
+    attendedDays,
+    attendanceRate,
+    daysElapsed,
+    monthLabel: getMonthLabel(anchor),
+  };
 }
 
 export function countTruthyDates(record, dateStrings) {

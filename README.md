@@ -1,6 +1,6 @@
 # Training App
 
-A mobile-friendly 60-day lean challenge tracker built with React and Vite.
+A mobile-friendly fitness attendance and progress tracker built with React and Vite.
 
 ## What Changed
 
@@ -111,4 +111,4 @@ npm run build
 
 - When Firebase is connected, the app shows `Shared cloud sync` in the header.
 - When Firebase is not configured, the app shows `Local-only mode`.
-- The challenge start date is currently set to `2026-04-02` in `src/utils/storage.js`.
+- Attendance is tracked on a month calendar in the app.
