@@ -104,6 +104,7 @@ export default async function handler(request, response) {
     typeof request.body === "string" ? JSON.parse(request.body || "{}") : request.body || {};
   const meal = requestBody?.meal?.trim() || "";
   const imageDataUrl = requestBody?.imageDataUrl?.trim() || "";
+  const userNotes = requestBody?.userNotes?.trim() || "";
 
   if (!meal && !imageDataUrl) {
     return response.status(400).json({ error: "Meal text or photo is required." });
@@ -141,6 +142,7 @@ export default async function handler(request, response) {
                 text:
                   "Estimate the calories for this meal. " +
                   (meal ? `User note: ${meal}. ` : "") +
+                  (userNotes ? `Additional notes: ${userNotes}. ` : "") +
                   "If the image is unclear, say so in notes and lower confidence. " +
                   "Always give a short meal label in the meal field.",
               },
@@ -157,6 +159,14 @@ export default async function handler(request, response) {
                     {
                       type: "input_image",
                       image_url: imageDataUrl,
+                    },
+                  ]
+                : []),
+              ...(userNotes
+                ? [
+                    {
+                      type: "input_text",
+                      text: `Extra meal notes: ${userNotes}`,
                     },
                   ]
                 : []),
