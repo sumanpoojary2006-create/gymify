@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import UserCard from "./components/UserCard";
 import Leaderboard from "./components/Leaderboard";
 import StreakPopup from "./components/StreakPopup";
+import ProfileLogin from "./components/ProfileLogin";
 import {
   loadData,
   saveData,
@@ -12,17 +13,24 @@ import {
   getTodayStr,
   getTotalDays,
 } from "./utils/storage";
+import { getUserProfile } from "./data/userProfiles";
 import { isFirebaseReady, saveToFirebase, subscribeToFirebase } from "./utils/firebase";
 
 const MotionDiv = motion.div;
 const MotionH1 = motion.h1;
 const MotionSpan = motion.span;
+const SELECTED_USER_KEY = "gymify-selected-user";
 
 export default function App() {
+  const userNames = getUserNames();
   const [data, setData] = useState(loadData);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("lean-challenge-dark") === "true");
   const [streakPopup, setStreakPopup] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedUser, setSelectedUser] = useState(() => {
+    const savedUser = localStorage.getItem(SELECTED_USER_KEY);
+    return userNames.includes(savedUser) ? savedUser : "";
+  });
   const cloudSyncEnabled = isFirebaseReady();
   const [cloudHydrated, setCloudHydrated] = useState(() => !cloudSyncEnabled);
   const lastRemoteSnapshotRef = useRef(null);
@@ -65,6 +73,15 @@ export default function App() {
     localStorage.setItem("lean-challenge-dark", darkMode);
   }, [darkMode]);
 
+  useEffect(() => {
+    if (!selectedUser) {
+      localStorage.removeItem(SELECTED_USER_KEY);
+      return;
+    }
+
+    localStorage.setItem(SELECTED_USER_KEY, selectedUser);
+  }, [selectedUser]);
+
   const handleUserUpdate = useCallback((name, newUserData) => {
     setData((previousData) => ({ ...previousData, [name]: newUserData }));
   }, []);
@@ -82,11 +99,47 @@ export default function App() {
   const users = Object.values(data);
   const todayCheckIns = users.filter((user) => user.gymDays[today]).length;
   const todayMealLogs = users.filter((user) => (user.calories[today] || []).length > 0).length;
+  const selectedProfile = selectedUser ? getUserProfile(selectedUser) : null;
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: "📊" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
   ];
+
+  if (!selectedUser) {
+    return (
+      <div
+        className={`app-shell min-h-screen transition-colors duration-300 ${
+          darkMode ? "dark bg-slate-950 text-white" : "bg-[var(--page-bg)] text-slate-950"
+        }`}
+      >
+        <div className="pointer-events-none fixed inset-0 overflow-hidden">
+          <div className="mesh-orb mesh-orb-one" />
+          <div className="mesh-orb mesh-orb-two" />
+          <div className="mesh-orb mesh-orb-three" />
+        </div>
+
+        <div className="absolute right-4 top-4 z-20">
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="rounded-full border border-slate-900/8 bg-white/85 p-2.5 text-lg shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+            title="Toggle dark mode"
+          >
+            <MotionSpan
+              key={darkMode ? "moon" : "sun"}
+              initial={{ rotate: -90, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              className="block"
+            >
+              {darkMode ? "☀️" : "🌗"}
+            </MotionSpan>
+          </button>
+        </div>
+
+        <ProfileLogin userNames={userNames} onSelectUser={setSelectedUser} />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -114,6 +167,11 @@ export default function App() {
               <span className="hidden rounded-full border border-slate-900/8 bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 sm:inline-flex">
                 Day {dayNumber}/{totalDays}
               </span>
+              {selectedProfile && (
+                <span className="hidden rounded-full border border-slate-900/8 bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 md:inline-flex">
+                  {selectedProfile.emoji} {selectedUser}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -126,6 +184,13 @@ export default function App() {
               >
                 {cloudSyncEnabled ? "Cloud sync" : "Local only"}
               </span>
+
+              <button
+                onClick={() => setSelectedUser("")}
+                className="hidden rounded-full border border-slate-900/8 bg-white/80 px-3 py-2 text-xs font-semibold text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 sm:inline-flex"
+              >
+                Switch profile
+              </button>
 
               <button
                 onClick={() => setDarkMode(!darkMode)}
@@ -213,15 +278,13 @@ export default function App() {
 
         {activeTab === "dashboard" ? (
           <section className="grid grid-cols-1 gap-4">
-            {getUserNames().map((name) => (
-              <UserCard
-                key={name}
-                userData={data[name]}
-                darkMode={darkMode}
-                onUpdate={(newData) => handleUserUpdate(name, newData)}
-                onStreakMilestone={(streak) => handleStreakMilestone(name, streak)}
-              />
-            ))}
+            <UserCard
+              key={selectedUser}
+              userData={data[selectedUser]}
+              darkMode={darkMode}
+              onUpdate={(newData) => handleUserUpdate(selectedUser, newData)}
+              onStreakMilestone={(streak) => handleStreakMilestone(selectedUser, streak)}
+            />
           </section>
         ) : (
           <section className="grid gap-5">
@@ -246,6 +309,13 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      <button
+        onClick={() => setSelectedUser("")}
+        className="fixed bottom-24 right-4 z-30 rounded-full border border-slate-900/10 bg-white/92 px-4 py-3 text-sm font-semibold text-slate-700 shadow-[0_20px_50px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/92 dark:text-slate-200 sm:hidden"
+      >
+        Switch
+      </button>
 
       {streakPopup && (
         <StreakPopup
