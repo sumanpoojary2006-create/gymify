@@ -90,6 +90,86 @@ function normalizeEstimate(result) {
   };
 }
 
+function buildInput(meal, userNotes) {
+  return [
+    {
+      role: "system",
+      content: [
+        {
+          type: "input_text",
+          text:
+            "You estimate meal calories for a fitness tracking app. Return structured JSON only. " +
+            "Be practical, conservative, and use common Indian and international serving assumptions when portions are unclear. " +
+            "If the meal description is ambiguous, mention that in notes and lower confidence.",
+        },
+      ],
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "input_text",
+          text:
+            "Estimate the calories for this meal. " +
+            (meal ? `User note: ${meal}. ` : "") +
+            (userNotes ? `Additional notes: ${userNotes}. ` : "") +
+            "Always give a short meal label in the meal field.",
+        },
+        ...(meal
+          ? [
+              {
+                type: "input_text",
+                text: `Meal description: ${meal}`,
+              },
+            ]
+          : []),
+        ...(userNotes
+          ? [
+              {
+                type: "input_text",
+                text: `Extra meal notes: ${userNotes}`,
+              },
+            ]
+          : []),
+      ],
+    },
+  ];
+}
+
+async function requestEstimate({ apiKey, meal, model, userNotes }) {
+  const openAiResponse = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      input: buildInput(meal, userNotes),
+      text: {
+        format: {
+          type: "json_schema",
+          name: "meal_calorie_estimate",
+          schema: CALORIE_RESPONSE_SCHEMA,
+          strict: true,
+        },
+      },
+    }),
+  });
+
+  const payload = await openAiResponse.json();
+  if (!openAiResponse.ok) {
+    throw new Error(payload?.error?.message || "OpenAI request failed.");
+  }
+
+  const text = getResponseText(payload);
+  if (!text) {
+    throw new Error("OpenAI returned an empty response.");
+  }
+
+  return normalizeEstimate(JSON.parse(text));
+}
+
 export default async function handler(request, response) {
   if (request.method !== "POST") {
     return response.status(405).json({ error: "Method not allowed." });
@@ -109,86 +189,31 @@ export default async function handler(request, response) {
     return response.status(400).json({ error: "Meal text is required." });
   }
 
-  const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+  const configuredModel = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+  const fallbackModel = "gpt-4.1-mini";
 
   try {
-    const openAiResponse = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        input: [
-          {
-            role: "system",
-            content: [
-              {
-                type: "input_text",
-                text:
-                  "You estimate meal calories for a fitness tracking app. Return structured JSON only. " +
-                  "Be practical, conservative, and use common Indian and international serving assumptions when portions are unclear. " +
-                  "If the meal description is ambiguous, mention that in notes and lower confidence.",
-              },
-            ],
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text:
-                  "Estimate the calories for this meal. " +
-                  (meal ? `User note: ${meal}. ` : "") +
-                  (userNotes ? `Additional notes: ${userNotes}. ` : "") +
-                  "Always give a short meal label in the meal field.",
-              },
-              ...(meal
-                ? [
-                    {
-                      type: "input_text",
-                      text: `Meal description: ${meal}`,
-                    },
-                  ]
-                : []),
-              ...(userNotes
-                ? [
-                    {
-                      type: "input_text",
-                      text: `Extra meal notes: ${userNotes}`,
-                    },
-                  ]
-                : []),
-            ],
-          },
-        ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "meal_calorie_estimate",
-            schema: CALORIE_RESPONSE_SCHEMA,
-            strict: true,
-          },
-        },
-      }),
-    });
-
-    const payload = await openAiResponse.json();
-    if (!openAiResponse.ok) {
-      return response.status(openAiResponse.status).json({
-        error: payload?.error?.message || "OpenAI request failed.",
+    try {
+      const estimate = await requestEstimate({
+        apiKey,
+        meal,
+        model: configuredModel,
+        userNotes,
       });
-    }
+      return response.status(200).json(estimate);
+    } catch (primaryError) {
+      if (configuredModel === fallbackModel) {
+        throw primaryError;
+      }
 
-    const text = getResponseText(payload);
-    if (!text) {
-      return response.status(502).json({ error: "OpenAI returned an empty response." });
+      const estimate = await requestEstimate({
+        apiKey,
+        meal,
+        model: fallbackModel,
+        userNotes,
+      });
+      return response.status(200).json(estimate);
     }
-
-    const parsed = JSON.parse(text);
-    const estimate = normalizeEstimate(parsed);
-    return response.status(200).json(estimate);
   } catch (error) {
     return response.status(500).json({
       error: error instanceof Error ? error.message : "Unexpected calorie estimation error.",
