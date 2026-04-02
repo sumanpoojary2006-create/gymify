@@ -8,6 +8,7 @@ import ProgressRing from "./ProgressRing";
 import TdeeCalculator from "./TdeeCalculator";
 import { estimateCalories } from "../data/calorieDatabase";
 import { getUserProfile } from "../data/userProfiles";
+import { estimateCaloriesWithAI } from "../utils/calorieEstimator";
 import {
   calculateBmi,
   calculateStreak,
@@ -28,6 +29,8 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
   const [showDetails, setShowDetails] = useState(false);
   const [showHealthTools, setShowHealthTools] = useState(false);
   const [calorieResult, setCalorieResult] = useState(null);
+  const [calorieNotice, setCalorieNotice] = useState(null);
+  const [isEstimatingCalories, setIsEstimatingCalories] = useState(false);
 
   const { name, gymDays, weights, calories, bodyProfile } = userData;
   const profile = getUserProfile(name);
@@ -77,27 +80,60 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
     setWeightInput("");
   };
 
-  const handleDishSubmit = (event) => {
+  const handleDishSubmit = async (event) => {
     event.preventDefault();
-    if (!dishInput.trim()) return;
+    const mealText = dishInput.trim();
+    if (!mealText || isEstimatingCalories) return;
 
-    const result = estimateCalories(dishInput);
-    const today = getTodayStr();
-    const todayEntries = calories[today] || [];
-    const newEntry = {
-      dish: dishInput,
-      calories: result.total,
-      breakdown: result.breakdown,
-      time: new Date().toLocaleTimeString(),
-    };
+    setIsEstimatingCalories(true);
 
-    setCalorieResult(result);
-    onUpdate({
-      ...userData,
-      calories: { ...calories, [today]: [...todayEntries, newEntry] },
-    });
-    setDishInput("");
-    setTimeout(() => setCalorieResult(null), 3000);
+    try {
+      let result;
+      let notice;
+
+      try {
+        result = await estimateCaloriesWithAI(mealText);
+        notice = {
+          tone: "success",
+          text: `AI estimated ${result.total} calories for this meal.`,
+        };
+      } catch {
+        result = {
+          ...estimateCalories(mealText),
+          source: "local",
+        };
+        notice = {
+          tone: "fallback",
+          text: `Saved with local estimate: ${result.total} calories.`,
+        };
+      }
+
+      const today = getTodayStr();
+      const todayEntries = calories[today] || [];
+      const newEntry = {
+        dish: mealText,
+        calories: result.total,
+        breakdown: result.breakdown,
+        source: result.source || "local",
+        confidence: result.confidence || "medium",
+        notes: result.notes || [],
+        time: new Date().toLocaleTimeString(),
+      };
+
+      setCalorieResult(result);
+      setCalorieNotice(notice);
+      onUpdate({
+        ...userData,
+        calories: { ...calories, [today]: [...todayEntries, newEntry] },
+      });
+      setDishInput("");
+      setTimeout(() => {
+        setCalorieResult(null);
+        setCalorieNotice(null);
+      }, 3500);
+    } finally {
+      setIsEstimatingCalories(false);
+    }
   };
 
   const handleBodyProfileSave = (nextBodyProfile) => {
@@ -263,9 +299,10 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
               />
               <button
                 type="submit"
+                disabled={isEstimatingCalories}
                 className="rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95"
               >
-                Add
+                {isEstimatingCalories ? "Estimating..." : "Add"}
               </button>
             </form>
 
@@ -273,11 +310,24 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
               <MotionDiv
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mb-3 rounded-2xl border border-emerald-300/40 bg-emerald-500/10 p-3"
+                className={`mb-3 rounded-2xl border p-3 ${
+                  calorieNotice?.tone === "fallback"
+                    ? "border-amber-300/50 bg-amber-500/10"
+                    : "border-emerald-300/40 bg-emerald-500/10"
+                }`}
               >
-                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                <p
+                  className={`text-sm font-semibold ${
+                    calorieNotice?.tone === "fallback"
+                      ? "text-amber-700 dark:text-amber-300"
+                      : "text-emerald-700 dark:text-emerald-400"
+                  }`}
+                >
                   +{calorieResult.total} calories added
                 </p>
+                {calorieNotice && (
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{calorieNotice.text}</p>
+                )}
               </MotionDiv>
             )}
 
@@ -295,6 +345,9 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
                       <span className="text-slate-700 dark:text-slate-200">{entry.dish}</span>
                       <span className="ml-2 font-semibold text-orange-600 dark:text-orange-300">
                         {entry.calories} cal
+                      </span>
+                      <span className="ml-2 rounded-full bg-slate-900/6 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:bg-white/10 dark:text-slate-300">
+                        {entry.source === "ai" ? "AI" : "Local"}
                       </span>
                     </div>
                   ))}
