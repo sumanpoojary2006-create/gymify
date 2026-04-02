@@ -41,7 +41,7 @@ function extractGeminiText(payload) {
   return textPart?.text || "";
 }
 
-async function requestWorkoutPlan({ apiKey, model, split, workoutCount }) {
+async function requestWorkoutPlan({ apiKey, model, split, level, workoutCount }) {
   const splitLabel = split === "weight-loss" ? "weight loss training" : split;
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -57,10 +57,11 @@ async function requestWorkoutPlan({ apiKey, model, split, workoutCount }) {
             parts: [
               {
                 text:
-                  `Create a practical ${splitLabel} workout plan with exactly ${workoutCount} exercises. ` +
+                  `Create a practical ${splitLabel} workout plan with exactly ${workoutCount} exercises for a ${level} gym user. ` +
                   "Return only JSON. Make it gym-friendly, balanced, and easy to follow for a general fitness user. " +
                   "Structure it like a coach-made session. " +
                   "Include a short overview, a clear focus label, a short warm-up, sets/reps/rest for each exercise, one finisher, and a few short coach notes. " +
+                  "Match the difficulty and exercise selection to the user's level. " +
                   "If the split is weight loss training, make it fat-loss friendly with simple strength plus conditioning choices.",
               },
             ],
@@ -110,10 +111,15 @@ export default async function handler(request, response) {
   const body =
     typeof request.body === "string" ? JSON.parse(request.body || "{}") : request.body || {};
   const split = body?.split?.trim()?.toLowerCase() || "";
+  const level = body?.level?.trim()?.toLowerCase() || "";
   const workoutCount = Number(body?.workoutCount);
 
   if (!["push", "pull", "legs", "weight-loss"].includes(split)) {
     return response.status(400).json({ error: "Choose Push, Pull, Legs, or Weight loss training." });
+  }
+
+  if (!["beginner", "intermediate", "advance"].includes(level)) {
+    return response.status(400).json({ error: "Choose Beginner, Intermediate, or Advance." });
   }
 
   if (!Number.isFinite(workoutCount) || workoutCount < 3 || workoutCount > 10) {
@@ -130,6 +136,7 @@ export default async function handler(request, response) {
           apiKey,
           model,
           split,
+          level,
           workoutCount,
         });
         return response.status(200).json(plan);

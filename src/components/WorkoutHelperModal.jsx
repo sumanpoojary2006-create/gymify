@@ -10,10 +10,17 @@ const splitOptions = [
   { value: "weight-loss", label: "Weight loss training" },
 ];
 
+const levelOptions = [
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advance", label: "Advance" },
+];
+
 const workoutCountOptions = [4, 5, 6, 7, 8];
 
 export default function WorkoutHelperModal({ open, onClose }) {
   const [split, setSplit] = useState("push");
+  const [level, setLevel] = useState("beginner");
   const [workoutCount, setWorkoutCount] = useState("5");
   const [plan, setPlan] = useState(null);
   const [generatedFor, setGeneratedFor] = useState(null);
@@ -33,6 +40,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
         },
         body: JSON.stringify({
           split,
+          level,
           workoutCount: Number(workoutCount),
         }),
       });
@@ -45,6 +53,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
       setPlan(payload);
       setGeneratedFor({
         split,
+        level,
         workoutCount,
       });
     } catch (requestError) {
@@ -104,7 +113,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
             </div>
 
             <div className="min-h-0 space-y-5 overflow-y-auto px-5 py-5">
-              <form onSubmit={handleGenerate} className="grid gap-4 md:grid-cols-[1fr_1fr_auto]">
+              <form onSubmit={handleGenerate} className="grid gap-4 md:grid-cols-3">
                 <label className="space-y-2">
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Split</span>
                   <select
@@ -118,6 +127,28 @@ export default function WorkoutHelperModal({ open, onClose }) {
                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   >
                     {splitOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Hardness level
+                  </span>
+                  <select
+                    value={level}
+                    onChange={(event) => {
+                      setLevel(event.target.value);
+                      setPlan(null);
+                      setGeneratedFor(null);
+                      setError("");
+                    }}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  >
+                    {levelOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -147,14 +178,16 @@ export default function WorkoutHelperModal({ open, onClose }) {
                   </select>
                 </label>
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="self-end rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {isLoading ? "Generating..." : "Get workout"}
-                </button>
               </form>
+
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={isLoading}
+                className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isLoading ? "Generating..." : "Get workout"}
+              </button>
 
               {error && (
                 <div className="rounded-2xl border border-rose-300/40 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-700 dark:text-rose-300">
@@ -187,7 +220,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
                     </span>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="grid gap-3 sm:grid-cols-4">
                     <div className="rounded-2xl border border-slate-900/8 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-800/60">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                         Split
@@ -196,6 +229,14 @@ export default function WorkoutHelperModal({ open, onClose }) {
                         {
                           splitOptions.find((option) => option.value === (generatedFor?.split || split))?.label
                         }
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-900/8 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-800/60">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                        Level
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
+                        {levelOptions.find((option) => option.value === (generatedFor?.level || level))?.label}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-slate-900/8 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-800/60">
