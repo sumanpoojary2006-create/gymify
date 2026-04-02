@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import UserCard from "./components/UserCard";
 import Leaderboard from "./components/Leaderboard";
-import LeaderboardGraph from "./components/LeaderboardGraph";
 import MealsFeed from "./components/MealsFeed";
 import ProfileSection from "./components/ProfileSection";
 import StreakPopup from "./components/StreakPopup";
@@ -177,7 +176,6 @@ export default function App() {
     { id: "dashboard", label: "Dashboard", icon: "📊" },
     { id: "meals", label: "Meals", icon: "🍽️" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
-    { id: "graph", label: "Graph", icon: "📈" },
   ];
 
   if (!activeUser) {
@@ -383,10 +381,8 @@ export default function App() {
                 onDeleteProfile={handleDeleteProfile}
                 onSaveProfile={(updatedUserData) => handleUserUpdate(activeUser, updatedUserData)}
               />
-            ) : activeTab === "leaderboard" ? (
-              <Leaderboard data={visibleData} />
             ) : (
-              <LeaderboardGraph data={visibleData} darkMode={darkMode} />
+              <Leaderboard data={visibleData} darkMode={darkMode} />
             )}
           </section>
         )}
