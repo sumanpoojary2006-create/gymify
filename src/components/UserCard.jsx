@@ -9,14 +9,13 @@ import { estimateCalories } from "../data/calorieDatabase";
 import { getUserProfile } from "../data/userProfiles";
 import {
   calculateStreak,
-  countLoggedCalorieDays,
   countTruthyDates,
-  getTodayCalories,
   getLatestWeight,
   getRecentDateStrings,
-  computeBadges,
+  getTodayCalories,
   getTodayStr,
   getTotalDays,
+  computeBadges,
 } from "../utils/storage";
 
 const MotionDiv = motion.div;
@@ -30,18 +29,12 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
   const { name, gymDays, weights, calories } = userData;
   const profile = getUserProfile(name);
   const streak = calculateStreak(gymDays);
-  const todayCalories = getTodayCalories(calories);
   const latestWeight = getLatestWeight(weights);
   const badges = computeBadges(userData);
+  const todayCalories = getTodayCalories(calories);
   const totalGymDays = Object.values(gymDays).filter(Boolean).length;
   const progress = Math.min((totalGymDays / getTotalDays()) * 100, 100);
-
-  const weekDates = getRecentDateStrings(7);
-  const weeklyGymDays = countTruthyDates(gymDays, weekDates);
-  const weeklyNutritionDays = countLoggedCalorieDays(calories, weekDates);
-  const weeklyWeighIns = weekDates.filter((dateStr) => weights[dateStr] !== undefined).length;
-  const weeklyTarget = 4;
-  const goalProgress = Math.min((weeklyGymDays / weeklyTarget) * 100, 100);
+  const weeklyGymDays = countTruthyDates(gymDays, getRecentDateStrings(7));
 
   const handleGymToggle = (dateStr) => {
     const newGymDays = { ...gymDays };
@@ -51,8 +44,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
       newGymDays[dateStr] = true;
     }
 
-    const newData = { ...userData, gymDays: newGymDays };
-    onUpdate(newData);
+    onUpdate({ ...userData, gymDays: newGymDays });
 
     const newStreak = calculateStreak(newGymDays);
     if (newStreak > 0 && newStreak % 6 === 0 && newStreak > streak) {
@@ -97,123 +89,70 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
   };
 
   const todayEntries = calories[getTodayStr()] || [];
-  const weeklyGoalCopy =
-    weeklyGymDays >= weeklyTarget
-      ? "Target locked in for the week."
-      : `${weeklyTarget - weeklyGymDays} more gym day${
-          weeklyTarget - weeklyGymDays === 1 ? "" : "s"
-        } to hit the target.`;
 
   return (
     <MotionDiv
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45 }}
-      className="overflow-hidden rounded-[30px] border border-white/50 bg-white/74 shadow-[0_28px_70px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70"
+      transition={{ duration: 0.35 }}
+      className="overflow-hidden rounded-[28px] border border-white/55 bg-white/82 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/72"
     >
-      <div className={`relative overflow-hidden bg-gradient-to-br ${profile.gradient} p-5 text-white`}>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.24),_transparent_26%),radial-gradient(circle_at_bottom_right,_rgba(15,23,42,0.18),_transparent_34%)]" />
-        <div className="absolute -right-10 top-2 h-28 w-28 rounded-full bg-white/12 blur-2xl" />
-
-        <div className="relative flex items-start justify-between gap-4">
+      <div className={`bg-gradient-to-r ${profile.gradient} p-5 text-white`}>
+        <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/18 bg-white/14 text-3xl backdrop-blur-md">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-2xl backdrop-blur-sm">
               {profile.emoji}
             </div>
-            <div className="text-left">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/70">
                 {profile.title}
               </p>
               <h3 className="mt-1 text-2xl font-semibold">{name}</h3>
-              <p className="mt-2 max-w-[14rem] text-sm leading-6 text-white/82">{profile.goal}</p>
+              <p className="mt-2 text-sm text-white/85">{profile.goal}</p>
             </div>
           </div>
+
           <ProgressRing
             progress={progress}
-            size={68}
+            size={60}
             strokeWidth={5}
             colors={profile.ringColors}
             label={`${Math.round(progress)}%`}
           />
         </div>
-
-        <div className="relative mt-5 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-          <div className="rounded-2xl border border-white/16 bg-white/10 px-3 py-3 backdrop-blur-sm">
-            <p className="text-white/65">Gym days</p>
-            <p className="mt-1 text-lg font-semibold">{totalGymDays}</p>
-          </div>
-          <div className="rounded-2xl border border-white/16 bg-white/10 px-3 py-3 backdrop-blur-sm">
-            <p className="text-white/65">Streak</p>
-            <p className="mt-1 text-lg font-semibold">{streak} days</p>
-          </div>
-          <div className="rounded-2xl border border-white/16 bg-white/10 px-3 py-3 backdrop-blur-sm">
-            <p className="text-white/65">Cal today</p>
-            <p className="mt-1 text-lg font-semibold">{todayCalories}</p>
-          </div>
-          <div className="rounded-2xl border border-white/16 bg-white/10 px-3 py-3 backdrop-blur-sm">
-            <p className="text-white/65">Latest weight</p>
-            <p className="mt-1 text-lg font-semibold">{latestWeight ? `${latestWeight.weight}` : "—"}</p>
-          </div>
-        </div>
       </div>
 
-      <div className="space-y-4 px-4 py-4 md:px-5">
-        <div className={`rounded-[24px] bg-gradient-to-br ${profile.softGradient} p-4`}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                Weekly focus
-              </p>
-              <h4 className="mt-2 font-display text-lg font-semibold text-slate-950 dark:text-white">
-                {weeklyGoalCopy}
-              </h4>
-              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                {profile.mantra}
-              </p>
-            </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${profile.statTint}`}>
-              {weeklyGymDays}/{weeklyTarget} workouts
-            </span>
+      <div className="space-y-4 p-5">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-3 py-3 text-center dark:border-white/10 dark:bg-white/5">
+            <p className="text-lg font-semibold text-slate-950 dark:text-white">🔥 {streak}</p>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              streak
+            </p>
           </div>
-
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/60 dark:bg-white/10">
-            <div
-              className={`h-full rounded-full bg-gradient-to-r ${profile.gradient}`}
-              style={{ width: `${goalProgress}%` }}
-            />
+          <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-3 py-3 text-center dark:border-white/10 dark:bg-white/5">
+            <p className="text-lg font-semibold text-slate-950 dark:text-white">
+              {latestWeight ? latestWeight.weight : "—"}
+            </p>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              weight
+            </p>
           </div>
-
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <div className="rounded-2xl border border-white/55 bg-white/70 px-3 py-3 text-center dark:border-white/10 dark:bg-white/6">
-              <p className="text-lg font-semibold text-slate-950 dark:text-white">{weeklyGymDays}</p>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                gym days
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/55 bg-white/70 px-3 py-3 text-center dark:border-white/10 dark:bg-white/6">
-              <p className="text-lg font-semibold text-slate-950 dark:text-white">{weeklyNutritionDays}</p>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                meal logs
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/55 bg-white/70 px-3 py-3 text-center dark:border-white/10 dark:bg-white/6">
-              <p className="text-lg font-semibold text-slate-950 dark:text-white">{weeklyWeighIns}</p>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                weigh-ins
-              </p>
-            </div>
+          <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-3 py-3 text-center dark:border-white/10 dark:bg-white/5">
+            <p className="text-lg font-semibold text-slate-950 dark:text-white">{weeklyGymDays}</p>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+              this week
+            </p>
           </div>
         </div>
 
         <BadgeDisplay badges={badges} />
-      </div>
 
-      <div className="px-4 pb-4 md:px-5">
         <button
           onClick={() => setShowDetails(!showDetails)}
-          className="w-full rounded-2xl border border-slate-900/8 bg-slate-950 px-4 py-3 text-center text-sm font-semibold text-white transition hover:opacity-95 dark:border-white/10 dark:bg-white dark:text-slate-950"
+          className="w-full rounded-2xl border border-slate-900/8 bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 dark:border-white/10 dark:bg-white dark:text-slate-950"
         >
-          {showDetails ? "Hide Details ▲" : "Open Progress Studio ▼"}
+          {showDetails ? "Hide details ▲" : "Open details ▼"}
         </button>
       </div>
 
@@ -222,37 +161,38 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: "auto", opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          className="space-y-4 px-4 pb-5 md:px-5"
+          className="space-y-4 px-5 pb-5"
         >
-          <div className="soft-panel rounded-[26px] p-4">
+          <div className="soft-panel rounded-[24px] p-4">
             <h4 className="font-display text-base font-semibold text-slate-950 dark:text-white">
-              Attendance heatmap
+              Gym attendance
             </h4>
             <p className="mb-3 mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Tap a day to mark it complete and keep the chain alive.
+              Tap a day to mark the workout complete.
             </p>
             <GymCalendar gymDays={gymDays} onToggle={handleGymToggle} />
           </div>
 
-          <div className="soft-panel rounded-[26px] p-4">
+          <div className="soft-panel rounded-[24px] p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h4 className="font-display text-base font-semibold text-slate-950 dark:text-white">
-                  Weight tracker
+                  Weight
                 </h4>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Keep the trend visible with quick weigh-ins.
+                  Add the latest number and follow the trend.
                 </p>
               </div>
               <span className="rounded-full border border-slate-900/8 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                {latestWeight ? `Latest ${latestWeight.weight} kg` : "No data yet"}
+                {latestWeight ? `${latestWeight.weight} kg` : "No data"}
               </span>
             </div>
+
             <form onSubmit={handleWeightSubmit} className="mb-3 flex gap-2">
               <input
                 type="number"
                 step="0.1"
-                placeholder="Enter today's weight (kg)"
+                placeholder="Today's weight (kg)"
                 value={weightInput}
                 onChange={(event) => setWeightInput(event.target.value)}
                 className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
@@ -261,20 +201,21 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
                 type="submit"
                 className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 dark:bg-white dark:text-slate-950"
               >
-                Log
+                Save
               </button>
             </form>
+
             <WeightChart weights={weights} darkMode={darkMode} />
           </div>
 
-          <div className="soft-panel rounded-[26px] p-4">
+          <div className="soft-panel rounded-[24px] p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h4 className="font-display text-base font-semibold text-slate-950 dark:text-white">
-                  Calorie tracker
+                  Calories
                 </h4>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Log meals fast and keep nutrition visible.
+                  Quick meal logging with a simple daily summary.
                 </p>
               </div>
               <span className="rounded-full border border-slate-900/8 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
@@ -307,21 +248,13 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
                 <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                   +{calorieResult.total} calories added
                 </p>
-                <div className="mt-1 space-y-0.5 text-xs text-emerald-600 dark:text-emerald-500">
-                  {calorieResult.breakdown.map((entry, index) => (
-                    <p key={index}>
-                      {entry.quantity}x {entry.item}: {entry.total} cal
-                      {entry.estimated && " (estimated)"}
-                    </p>
-                  ))}
-                </div>
               </MotionDiv>
             )}
 
             {todayEntries.length > 0 && (
               <div className="mb-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  Today's log
+                  Today
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {todayEntries.map((entry, index) => (
