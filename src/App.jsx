@@ -136,7 +136,7 @@ export default function App() {
           </button>
         </div>
 
-        <ProfileLogin userNames={userNames} onSelectUser={setSelectedUser} />
+        <ProfileLogin userNames={userNames} onLoginSuccess={setSelectedUser} />
       </div>
     );
   }
