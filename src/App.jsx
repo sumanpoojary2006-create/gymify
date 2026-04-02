@@ -4,6 +4,7 @@ import UserCard from "./components/UserCard";
 import Leaderboard from "./components/Leaderboard";
 import LeaderboardGraph from "./components/LeaderboardGraph";
 import MealsFeed from "./components/MealsFeed";
+import ProfileSection from "./components/ProfileSection";
 import StreakPopup from "./components/StreakPopup";
 import ProfileLogin from "./components/ProfileLogin";
 import {
@@ -98,6 +99,16 @@ export default function App() {
 
   const closeStreakPopup = useCallback(() => setStreakPopup(null), []);
 
+  const handleDeleteProfile = useCallback((name) => {
+    setData((previousData) => {
+      const nextData = { ...previousData };
+      delete nextData[name];
+      return nextData;
+    });
+    setSelectedUser("");
+    setActiveTab("dashboard");
+  }, []);
+
   const handleLogin = useCallback(
     ({ name, password }) => {
       const existingUser = data[name];
@@ -167,6 +178,7 @@ export default function App() {
     { id: "meals", label: "Meals", icon: "🍽️" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
     { id: "graph", label: "Graph", icon: "📈" },
+    { id: "profile", label: "Profile", icon: "👤" },
   ];
 
   if (!activeUser) {
@@ -354,6 +366,13 @@ export default function App() {
           <section className="grid gap-5">
             {activeTab === "meals" ? (
               <MealsFeed activeUser={activeUser} data={visibleData} />
+            ) : activeTab === "profile" ? (
+              <ProfileSection
+                key={activeUser}
+                userData={data[activeUser]}
+                onDeleteProfile={handleDeleteProfile}
+                onSaveProfile={(updatedUserData) => handleUserUpdate(activeUser, updatedUserData)}
+              />
             ) : activeTab === "leaderboard" ? (
               <Leaderboard data={visibleData} />
             ) : (
