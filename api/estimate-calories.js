@@ -189,31 +189,20 @@ export default async function handler(request, response) {
     return response.status(400).json({ error: "Meal text is required." });
   }
 
-  const configuredModel = process.env.OPENAI_MODEL || "gpt-4.1-mini";
-  const fallbackModel = "gpt-4.1-mini";
+  const configuredModel = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const modelCandidates = [...new Set([configuredModel, "gpt-4o-mini", "gpt-4.1-mini"])];
 
   try {
-    try {
+    for (const model of modelCandidates) {
       const estimate = await requestEstimate({
         apiKey,
         meal,
-        model: configuredModel,
-        userNotes,
-      });
-      return response.status(200).json(estimate);
-    } catch (primaryError) {
-      if (configuredModel === fallbackModel) {
-        throw primaryError;
-      }
-
-      const estimate = await requestEstimate({
-        apiKey,
-        meal,
-        model: fallbackModel,
+        model,
         userNotes,
       });
       return response.status(200).json(estimate);
     }
+    throw new Error("OpenAI did not return a calorie estimate.");
   } catch (error) {
     return response.status(500).json({
       error: error instanceof Error ? error.message : "Unexpected calorie estimation error.",

@@ -478,7 +478,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
               </button>
             </form>
 
-            {calorieResult && (
+            {calorieNotice && (
               <MotionDiv
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -495,7 +495,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
                       : "text-emerald-700 dark:text-emerald-400"
                   }`}
                 >
-                  +{calorieResult.total} calories added
+                  {calorieResult ? `+${calorieResult.total} calories added` : "Meal not saved"}
                 </p>
                 {calorieNotice && (
                   <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{calorieNotice.text}</p>

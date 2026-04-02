@@ -55,7 +55,7 @@ Optional AI calorie estimation:
 
 ```bash
 OPENAI_API_KEY=your-openai-api-key
-OPENAI_MODEL=gpt-4.1-mini
+OPENAI_MODEL=gpt-4o-mini
 ```
 
 If `OPENAI_API_KEY` is set in Vercel, meal logging will call the private `/api/estimate-calories` endpoint for AI estimates. If it is missing, the app falls back to the built-in local food table.
