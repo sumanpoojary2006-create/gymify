@@ -365,7 +365,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
               Gym attendance
             </h4>
             <p className="mb-3 mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Tap a day to mark the workout complete.
+              Only today can be marked. Past attendance stays visible but locked.
             </p>
             <GymCalendar gymDays={gymDays} onToggle={handleGymToggle} />
           </div>

@@ -42,6 +42,7 @@ export default function GymCalendar({ gymDays, onToggle }) {
           day: index + 1,
           isChecked: !!gymDays[dateStr],
           isToday: dateStr === today,
+          isPast: date < todayDate,
           isFuture: date > todayDate,
         };
       }),
@@ -96,15 +97,19 @@ export default function GymCalendar({ gymDays, onToggle }) {
           ) : (
             <MotionButton
               key={cell.key}
-              whileHover={!cell.isFuture ? { scale: 1.06 } : {}}
-              whileTap={!cell.isFuture ? { scale: 0.94 } : {}}
-              onClick={() => !cell.isFuture && onToggle(cell.dateStr)}
-              disabled={cell.isFuture}
+              whileHover={cell.isToday ? { scale: 1.06 } : {}}
+              whileTap={cell.isToday ? { scale: 0.94 } : {}}
+              onClick={() => cell.isToday && onToggle(cell.dateStr)}
+              disabled={!cell.isToday}
               className={`
                 flex aspect-square w-full items-center justify-center rounded-xl text-[11px] font-semibold
                 transition-all duration-200 border
                 ${cell.isFuture
                   ? "cursor-not-allowed border-transparent bg-slate-200/60 text-slate-400 dark:bg-slate-800/60 dark:text-slate-600"
+                  : cell.isPast && cell.isChecked
+                    ? "cursor-not-allowed border-emerald-300 bg-emerald-500/90 text-white dark:border-emerald-500/50"
+                    : cell.isPast
+                      ? "cursor-not-allowed border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-400"
                   : cell.isChecked
                     ? "border-emerald-400 bg-emerald-500 text-white shadow-[0_10px_24px_rgba(16,185,129,0.34)]"
                     : cell.isToday
@@ -112,7 +117,7 @@ export default function GymCalendar({ gymDays, onToggle }) {
                       : "border-slate-200 bg-white text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:border-slate-500"
                 }
               `}
-              title={cell.dateStr}
+              title={cell.isToday ? `${cell.dateStr} (today)` : `${cell.dateStr} (locked)`}
             >
               {cell.isChecked ? "✓" : cell.day}
             </MotionButton>
