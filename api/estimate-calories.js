@@ -102,9 +102,11 @@ export default async function handler(request, response) {
 
   const requestBody =
     typeof request.body === "string" ? JSON.parse(request.body || "{}") : request.body || {};
-  const meal = requestBody?.meal?.trim();
-  if (!meal) {
-    return response.status(400).json({ error: "Meal text is required." });
+  const meal = requestBody?.meal?.trim() || "";
+  const imageDataUrl = requestBody?.imageDataUrl?.trim() || "";
+
+  if (!meal && !imageDataUrl) {
+    return response.status(400).json({ error: "Meal text or photo is required." });
   }
 
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
@@ -136,8 +138,28 @@ export default async function handler(request, response) {
             content: [
               {
                 type: "input_text",
-                text: meal,
+                text:
+                  "Estimate the calories for this meal. " +
+                  (meal ? `User note: ${meal}. ` : "") +
+                  "If the image is unclear, say so in notes and lower confidence. " +
+                  "Always give a short meal label in the meal field.",
               },
+              ...(meal
+                ? [
+                    {
+                      type: "input_text",
+                      text: `Meal description: ${meal}`,
+                    },
+                  ]
+                : []),
+              ...(imageDataUrl
+                ? [
+                    {
+                      type: "input_image",
+                      image_url: imageDataUrl,
+                    },
+                  ]
+                : []),
             ],
           },
         ],

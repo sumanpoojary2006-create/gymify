@@ -23,9 +23,20 @@ import {
 
 const MotionDiv = motion.div;
 
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(new Error("Failed to read image."));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function UserCard({ userData, darkMode, onStreakMilestone, onUpdate }) {
   const [weightInput, setWeightInput] = useState("");
   const [dishInput, setDishInput] = useState("");
+  const [dishPhotoName, setDishPhotoName] = useState("");
+  const [dishPhotoDataUrl, setDishPhotoDataUrl] = useState("");
   const [showDetails, setShowDetails] = useState(false);
   const [showHealthTools, setShowHealthTools] = useState(false);
   const [calorieResult, setCalorieResult] = useState(null);
@@ -80,10 +91,44 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
     setWeightInput("");
   };
 
+  const clearMealComposer = () => {
+    setDishInput("");
+    setDishPhotoName("");
+    setDishPhotoDataUrl("");
+  };
+
+  const clearPhotoAttachment = () => {
+    setDishPhotoName("");
+    setDishPhotoDataUrl("");
+  };
+
+  const handlePhotoChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setDishPhotoDataUrl(dataUrl);
+      setDishPhotoName(file.name);
+      setCalorieNotice({
+        tone: "success",
+        text: "Photo attached. Add now to estimate calories from the image.",
+      });
+    } catch {
+      setCalorieNotice({
+        tone: "fallback",
+        text: "Could not read that photo. Please try another image.",
+      });
+    } finally {
+      event.target.value = "";
+    }
+  };
+
   const handleDishSubmit = async (event) => {
     event.preventDefault();
     const mealText = dishInput.trim();
-    if (!mealText || isEstimatingCalories) return;
+    const hasPhoto = Boolean(dishPhotoDataUrl);
+    if ((!mealText && !hasPhoto) || isEstimatingCalories) return;
 
     setIsEstimatingCalories(true);
 
@@ -92,31 +137,47 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
       let notice;
 
       try {
-        result = await estimateCaloriesWithAI(mealText);
+        result = await estimateCaloriesWithAI({
+          meal: mealText,
+          imageDataUrl: dishPhotoDataUrl,
+        });
         notice = {
           tone: "success",
-          text: `AI estimated ${result.total} calories for this meal.`,
+          text: hasPhoto
+            ? `AI estimated ${result.total} calories from the meal photo.`
+            : `AI estimated ${result.total} calories for this meal.`,
         };
       } catch {
+        if (!mealText) {
+          setCalorieNotice({
+            tone: "fallback",
+            text: "Photo-based calorie detection needs the AI endpoint. Add the OpenAI key in Vercel and try again.",
+          });
+          return;
+        }
+
         result = {
           ...estimateCalories(mealText),
           source: "local",
         };
         notice = {
           tone: "fallback",
-          text: `Saved with local estimate: ${result.total} calories.`,
+          text: hasPhoto
+            ? `Saved with local text estimate: ${result.total} calories.`
+            : `Saved with local estimate: ${result.total} calories.`,
         };
       }
 
       const today = getTodayStr();
       const todayEntries = calories[today] || [];
       const newEntry = {
-        dish: mealText,
+        dish: result.meal || mealText || "Photo meal",
         calories: result.total,
         breakdown: result.breakdown,
         source: result.source || "local",
         confidence: result.confidence || "medium",
         notes: result.notes || [],
+        usedPhoto: hasPhoto,
         time: new Date().toLocaleTimeString(),
       };
 
@@ -126,7 +187,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
         ...userData,
         calories: { ...calories, [today]: [...todayEntries, newEntry] },
       });
-      setDishInput("");
+      clearMealComposer();
       setTimeout(() => {
         setCalorieResult(null);
         setCalorieNotice(null);
@@ -290,17 +351,54 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
             </div>
 
             <form onSubmit={handleDishSubmit} className="mb-3 flex gap-2">
-              <input
-                type="text"
-                placeholder='e.g. "2 dosa and chutney"'
-                value={dishInput}
-                onChange={(event) => setDishInput(event.target.value)}
-                className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-              />
+              <div className="flex-1 space-y-2">
+                <input
+                  type="text"
+                  placeholder='e.g. "2 dosa and chutney" or just add a meal photo'
+                  value={dishInput}
+                  onChange={(event) => setDishInput(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="cursor-pointer rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-orange-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    Add photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {dishPhotoName && (
+                    <div className="flex items-center gap-2 rounded-2xl border border-slate-900/8 bg-white/70 px-3 py-2 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                      <span className="max-w-[140px] truncate">{dishPhotoName}</span>
+                      <button
+                        type="button"
+                        onClick={clearPhotoAttachment}
+                        className="font-semibold text-rose-500"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {dishPhotoDataUrl && (
+                  <img
+                    src={dishPhotoDataUrl}
+                    alt="Selected meal"
+                    className="h-24 w-24 rounded-2xl object-cover shadow-sm"
+                  />
+                )}
+              </div>
+
               <button
                 type="submit"
                 disabled={isEstimatingCalories}
-                className="rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95"
+                className="self-start rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isEstimatingCalories ? "Estimating..." : "Add"}
               </button>
@@ -349,6 +447,11 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
                       <span className="ml-2 rounded-full bg-slate-900/6 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:bg-white/10 dark:text-slate-300">
                         {entry.source === "ai" ? "AI" : "Local"}
                       </span>
+                      {entry.usedPhoto && (
+                        <span className="ml-2 rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-orange-600 dark:text-orange-300">
+                          Photo
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
