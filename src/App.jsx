@@ -425,7 +425,13 @@ export default function App() {
         />
       )}
 
-      <WorkoutHelperModal open={showWorkoutHelper} onClose={() => setShowWorkoutHelper(false)} />
+      <WorkoutHelperModal
+        open={showWorkoutHelper}
+        onClose={() => {
+          setShowWorkoutHelper(false);
+          setActiveTab("dashboard");
+        }}
+      />
     </div>
   );
 }

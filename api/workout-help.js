@@ -42,6 +42,7 @@ function extractGeminiText(payload) {
 }
 
 async function requestWorkoutPlan({ apiKey, model, split, workoutCount }) {
+  const splitLabel = split === "weight-loss" ? "weight loss training" : split;
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
@@ -56,9 +57,11 @@ async function requestWorkoutPlan({ apiKey, model, split, workoutCount }) {
             parts: [
               {
                 text:
-                  `Create a practical ${split} workout plan with exactly ${workoutCount} exercises. ` +
+                  `Create a practical ${splitLabel} workout plan with exactly ${workoutCount} exercises. ` +
                   "Return only JSON. Make it gym-friendly, balanced, and easy to follow for a general fitness user. " +
-                  "Include a short warm-up, sets/reps/rest for each exercise, one finisher, and a few short coach notes.",
+                  "Structure it like a coach-made session. " +
+                  "Include a short overview, a clear focus label, a short warm-up, sets/reps/rest for each exercise, one finisher, and a few short coach notes. " +
+                  "If the split is weight loss training, make it fat-loss friendly with simple strength plus conditioning choices.",
               },
             ],
           },
@@ -109,8 +112,8 @@ export default async function handler(request, response) {
   const split = body?.split?.trim()?.toLowerCase() || "";
   const workoutCount = Number(body?.workoutCount);
 
-  if (!["push", "pull", "legs"].includes(split)) {
-    return response.status(400).json({ error: "Choose Push, Pull, or Legs." });
+  if (!["push", "pull", "legs", "weight-loss"].includes(split)) {
+    return response.status(400).json({ error: "Choose Push, Pull, Legs, or Weight loss training." });
   }
 
   if (!Number.isFinite(workoutCount) || workoutCount < 3 || workoutCount > 10) {

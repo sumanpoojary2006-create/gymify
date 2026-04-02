@@ -7,6 +7,7 @@ const splitOptions = [
   { value: "push", label: "Push" },
   { value: "pull", label: "Pull" },
   { value: "legs", label: "Legs" },
+  { value: "weight-loss", label: "Weight loss training" },
 ];
 
 const workoutCountOptions = [4, 5, 6, 7, 8];
@@ -49,6 +50,12 @@ export default function WorkoutHelperModal({ open, onClose }) {
     }
   };
 
+  const handleClose = () => {
+    setError("");
+    setPlan(null);
+    onClose();
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -57,7 +64,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
-          onClick={onClose}
+          onClick={handleClose}
         >
           <MotionDiv
             initial={{ opacity: 0, y: 18, scale: 0.98 }}
@@ -82,7 +89,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
 
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
               >
                 Close
@@ -148,11 +155,42 @@ export default function WorkoutHelperModal({ open, onClose }) {
                       <h3 className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
                         {plan.title}
                       </h3>
-                      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{plan.overview}</p>
+                      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                        {plan.overview}
+                      </p>
                     </div>
                     <span className="rounded-full border border-slate-900/8 bg-white px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-slate-800 dark:text-slate-300">
                       {plan.focus}
                     </span>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-slate-900/8 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-800/60">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                        Split
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
+                        {
+                          splitOptions.find((option) => option.value === split)?.label
+                        }
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-900/8 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-800/60">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                        Workouts
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
+                        {workoutCount} planned
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-900/8 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-800/60">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                        Goal
+                      </p>
+                      <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
+                        {plan.focus}
+                      </p>
+                    </div>
                   </div>
 
                   {Array.isArray(plan.warmup) && plan.warmup.length > 0 && (
@@ -173,27 +211,40 @@ export default function WorkoutHelperModal({ open, onClose }) {
                     </div>
                   )}
 
-                  <div className="overflow-hidden rounded-[22px] border border-slate-900/8 dark:border-white/10">
-                    <div className="grid grid-cols-[minmax(0,1.4fr)_auto_auto] gap-3 bg-slate-900/5 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:bg-white/5 dark:text-slate-400">
-                      <span>Exercise</span>
-                      <span>Sets x Reps</span>
-                      <span>Rest</span>
-                    </div>
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                      Workout plan
+                    </p>
                     {plan.exercises.map((exercise, index) => (
                       <div
                         key={`${exercise.name}-${index}`}
-                        className="grid grid-cols-[minmax(0,1.4fr)_auto_auto] gap-3 border-t border-slate-900/8 bg-white/75 px-4 py-3 text-sm dark:border-white/10 dark:bg-white/6"
+                        className="rounded-[22px] border border-slate-900/8 bg-white/75 px-4 py-4 dark:border-white/10 dark:bg-white/6"
                       >
-                        <div className="min-w-0">
-                          <p className="font-medium text-slate-900 dark:text-white">{exercise.name}</p>
-                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            {exercise.notes}
-                          </p>
+                        <div className="flex items-start gap-3">
+                          <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-semibold text-white dark:bg-white dark:text-slate-950">
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <div>
+                                <p className="font-medium text-slate-900 dark:text-white">
+                                  {exercise.name}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                  {exercise.notes}
+                                </p>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-xs sm:min-w-[180px]">
+                                <span className="rounded-full bg-slate-900/6 px-3 py-1.5 text-center font-semibold text-slate-700 dark:bg-white/10 dark:text-slate-200">
+                                  {exercise.sets} x {exercise.reps}
+                                </span>
+                                <span className="rounded-full bg-slate-900/6 px-3 py-1.5 text-center font-semibold text-slate-700 dark:bg-white/10 dark:text-slate-200">
+                                  Rest {exercise.rest}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">
-                          {exercise.sets} x {exercise.reps}
-                        </span>
-                        <span className="text-slate-600 dark:text-slate-300">{exercise.rest}</span>
                       </div>
                     ))}
                   </div>
@@ -219,6 +270,16 @@ export default function WorkoutHelperModal({ open, onClose }) {
                       </ul>
                     </div>
                   )}
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="rounded-2xl border border-slate-900/10 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                    >
+                      Close to home
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
