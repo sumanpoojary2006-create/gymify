@@ -1,6 +1,4 @@
 const STORAGE_KEY = "lean-challenge-60day";
-
-const USERS = ["Suman", "Adhiraj", "Sitara"];
 const TOTAL_DAYS = 60;
 const START_DATE = "2026-04-02"; // Challenge start date
 
@@ -10,6 +8,9 @@ function getDefaultUserData(name) {
     gymDays: {},       // { "2026-04-02": true, ... }
     weights: {},       // { "2026-04-02": 75.5, ... }
     calories: {},      // { "2026-04-02": [{ dish: "...", calories: 120, time: "..." }] }
+    auth: {
+      password: "",
+    },
     bodyProfile: {
       age: "",
       heightCm: "",
@@ -31,16 +32,38 @@ export function getTotalDays() {
   return TOTAL_DAYS;
 }
 
-export function getUserNames() {
-  return USERS;
+export function getUserNames(data = {}) {
+  return Object.keys(data).filter((name) => isRegisteredUser(data[name])).sort();
+}
+
+export function isRegisteredUser(userData) {
+  return Boolean(userData?.auth?.password);
+}
+
+export function createUserData({ activity = "moderate", age, heightCm, name, password, sex, weightKg }) {
+  const bmiResult = calculateBmi({ heightCm, weightKg });
+  const today = getTodayStr();
+
+  return {
+    ...getDefaultUserData(name),
+    auth: {
+      password,
+    },
+    weights: weightKg ? { [today]: Number(weightKg) } : {},
+    bodyProfile: {
+      age: age || "",
+      heightCm: heightCm || "",
+      weightKg: weightKg || "",
+      sex: sex || "",
+      activity,
+      bmi: bmiResult?.bmi || "",
+      bmiCategory: bmiResult?.category || "",
+    },
+  };
 }
 
 export function createDefaultData() {
-  const data = {};
-  for (const name of USERS) {
-    data[name] = getDefaultUserData(name);
-  }
-  return data;
+  return {};
 }
 
 function normalizeUserData(name, userData = {}) {
@@ -50,6 +73,10 @@ function normalizeUserData(name, userData = {}) {
     gymDays: userData.gymDays || {},
     weights: userData.weights || {},
     calories: userData.calories || {},
+    auth: {
+      ...getDefaultUserData(name).auth,
+      ...(userData.auth || {}),
+    },
     bodyProfile: {
       ...getDefaultUserData(name).bodyProfile,
       ...(userData.bodyProfile || {}),
@@ -64,7 +91,7 @@ export function normalizeData(rawData) {
   }
 
   const data = {};
-  for (const name of USERS) {
+  for (const name of Object.keys(rawData)) {
     data[name] = normalizeUserData(name, rawData[name]);
   }
   return data;

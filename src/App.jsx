@@ -6,10 +6,12 @@ import LeaderboardGraph from "./components/LeaderboardGraph";
 import StreakPopup from "./components/StreakPopup";
 import ProfileLogin from "./components/ProfileLogin";
 import {
+  createUserData,
   loadData,
   saveData,
   normalizeData,
   getUserNames,
+  isRegisteredUser,
   getCurrentDayNumber,
   getTodayStr,
   getTotalDays,
@@ -23,18 +25,20 @@ const MotionSpan = motion.span;
 const SELECTED_USER_KEY = "gymify-selected-user";
 
 export default function App() {
-  const userNames = getUserNames();
   const [data, setData] = useState(loadData);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("lean-challenge-dark") === "true");
   const [streakPopup, setStreakPopup] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedUser, setSelectedUser] = useState(() => {
     const savedUser = localStorage.getItem(SELECTED_USER_KEY);
-    return userNames.includes(savedUser) ? savedUser : "";
+    return savedUser || "";
   });
   const cloudSyncEnabled = isFirebaseReady();
   const [cloudHydrated, setCloudHydrated] = useState(() => !cloudSyncEnabled);
   const lastRemoteSnapshotRef = useRef(null);
+  const userNames = getUserNames(data);
+  const visibleData = Object.fromEntries(userNames.map((name) => [name, data[name]]));
+  const activeUser = selectedUser && isRegisteredUser(data[selectedUser]) ? selectedUser : "";
 
   useEffect(() => {
     if (!cloudSyncEnabled) return undefined;
@@ -75,13 +79,13 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    if (!selectedUser) {
+    if (!activeUser) {
       localStorage.removeItem(SELECTED_USER_KEY);
       return;
     }
 
-    localStorage.setItem(SELECTED_USER_KEY, selectedUser);
-  }, [selectedUser]);
+    localStorage.setItem(SELECTED_USER_KEY, activeUser);
+  }, [activeUser]);
 
   const handleUserUpdate = useCallback((name, newUserData) => {
     setData((previousData) => ({ ...previousData, [name]: newUserData }));
@@ -93,14 +97,69 @@ export default function App() {
 
   const closeStreakPopup = useCallback(() => setStreakPopup(null), []);
 
+  const handleLogin = useCallback(
+    ({ name, password }) => {
+      const existingUser = data[name];
+
+      if (!name || !password) {
+        return { ok: false, message: "Enter your username and password." };
+      }
+
+      if (!isRegisteredUser(existingUser)) {
+        return { ok: false, message: "No account found with that username." };
+      }
+
+      if (existingUser.auth.password !== password) {
+        return { ok: false, message: "Incorrect password. Try again." };
+      }
+
+      setSelectedUser(name);
+      setActiveTab("dashboard");
+      return { ok: true };
+    },
+    [data]
+  );
+
+  const handleSignup = useCallback(
+    ({ activity, age, heightCm, name, password, sex, weightKg }) => {
+      if (!name || !password || !age || !heightCm || !weightKg || !sex) {
+        return { ok: false, message: "Fill in all sign-up details." };
+      }
+
+      const existingUser = data[name];
+      if (isRegisteredUser(existingUser)) {
+        return { ok: false, message: "That username is already taken." };
+      }
+
+      const createdUser = createUserData({
+        activity,
+        age,
+        heightCm,
+        name,
+        password,
+        sex,
+        weightKg,
+      });
+
+      setData((previousData) => ({
+        ...previousData,
+        [name]: createdUser,
+      }));
+      setSelectedUser(name);
+      setActiveTab("dashboard");
+      return { ok: true };
+    },
+    [data]
+  );
+
   const today = getTodayStr();
   const totalDays = getTotalDays();
   const dayNumber = Math.min(Math.max(getCurrentDayNumber(), 1), totalDays);
   const challengeProgress = Math.min(Math.max((dayNumber / totalDays) * 100, 0), 100);
-  const users = Object.values(data);
+  const users = Object.values(visibleData);
   const todayCheckIns = users.filter((user) => user.gymDays[today]).length;
   const todayMealLogs = users.filter((user) => (user.calories[today] || []).length > 0).length;
-  const selectedProfile = selectedUser ? getUserProfile(selectedUser) : null;
+  const selectedProfile = activeUser ? getUserProfile(activeUser) : null;
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: "📊" },
@@ -108,7 +167,7 @@ export default function App() {
     { id: "graph", label: "Graph", icon: "📈" },
   ];
 
-  if (!selectedUser) {
+  if (!activeUser) {
     return (
       <div
         className={`app-shell min-h-screen transition-colors duration-300 ${
@@ -138,7 +197,7 @@ export default function App() {
           </button>
         </div>
 
-        <ProfileLogin userNames={userNames} onLoginSuccess={setSelectedUser} />
+        <ProfileLogin existingUsers={userNames} onLogin={handleLogin} onSignup={handleSignup} />
       </div>
     );
   }
@@ -171,7 +230,7 @@ export default function App() {
               </span>
               {selectedProfile && (
                 <span className="hidden rounded-full border border-slate-900/8 bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 md:inline-flex">
-                  {selectedProfile.emoji} {selectedUser}
+                  {selectedProfile.emoji} {activeUser}
                 </span>
               )}
             </div>
@@ -238,10 +297,11 @@ export default function App() {
                 60 Day Lean Challenge
               </p>
               <h2 className="mt-2 font-display text-2xl font-semibold text-slate-950 dark:text-white">
-                Simple shared tracking for your crew
+                Simple shared tracking for your group
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Start with the three people below. Open a card only when you want more details.
+                Track one profile at a time, while the leaderboard and graph reflect everyone who
+                has signed up.
               </p>
             </div>
 
@@ -281,19 +341,19 @@ export default function App() {
         {activeTab === "dashboard" ? (
           <section className="grid grid-cols-1 gap-4">
             <UserCard
-              key={selectedUser}
-              userData={data[selectedUser]}
+              key={activeUser}
+              userData={data[activeUser]}
               darkMode={darkMode}
-              onUpdate={(newData) => handleUserUpdate(selectedUser, newData)}
-              onStreakMilestone={(streak) => handleStreakMilestone(selectedUser, streak)}
+              onUpdate={(newData) => handleUserUpdate(activeUser, newData)}
+              onStreakMilestone={(streak) => handleStreakMilestone(activeUser, streak)}
             />
           </section>
         ) : (
           <section className="grid gap-5">
             {activeTab === "leaderboard" ? (
-              <Leaderboard data={data} />
+              <Leaderboard data={visibleData} />
             ) : (
-              <LeaderboardGraph data={data} darkMode={darkMode} />
+              <LeaderboardGraph data={visibleData} darkMode={darkMode} />
             )}
           </section>
         )}
