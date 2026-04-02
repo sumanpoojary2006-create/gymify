@@ -14,7 +14,7 @@ function getDeficitSummary(tdee, intake) {
 
   if (difference < 0) {
     return {
-      label: `Deficit of ${Math.abs(difference)} cal`,
+      label: `${Math.abs(difference)} cal under target`,
       tone: "text-emerald-700 dark:text-emerald-400",
       chip: "border-emerald-300/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     };
@@ -200,7 +200,7 @@ export default function TdeeCalculator({
           </div>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
             Based on today&apos;s logged calories versus estimated maintenance using the most recent
-            logged weight. This is a helpful daily estimate, not a medical diagnosis.
+            logged weight. This is a helpful daily check, not a medical diagnosis.
           </p>
         </div>
       )}

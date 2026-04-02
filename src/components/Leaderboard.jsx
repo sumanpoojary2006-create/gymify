@@ -42,7 +42,7 @@ export default function Leaderboard({ darkMode, data }) {
             </h2>
           </div>
           <span className="rounded-full border border-slate-900/8 bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-            Score = calorie deficit + gym days x 10 + streak
+            Score = under target + attendance x 10 + streak
           </span>
         </div>
 
@@ -92,7 +92,7 @@ export default function Leaderboard({ darkMode, data }) {
                 <div className={`rounded-2xl px-3 py-3 text-center ${index === 0 ? "bg-white/14" : "bg-slate-900/5 dark:bg-white/5"}`}>
                   <p className="text-lg font-semibold">{user.deficit}</p>
                   <p className={`text-[11px] uppercase tracking-[0.18em] ${index === 0 ? "text-white/70" : "text-slate-500 dark:text-slate-400"}`}>
-                    deficit
+                    under target
                   </p>
                 </div>
                 <div className={`rounded-2xl px-3 py-3 text-center ${index === 0 ? "bg-white/14" : "bg-slate-900/5 dark:bg-white/5"}`}>

@@ -559,7 +559,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
                   Health tools
                 </h4>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Open TDEE, BMI, and deficit analysis only when you need it.
+                  Open TDEE, BMI, and under-target analysis only when you need it.
                 </p>
               </div>
               <button
