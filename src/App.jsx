@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import UserCard from "./components/UserCard";
 import Leaderboard from "./components/Leaderboard";
 import LeaderboardGraph from "./components/LeaderboardGraph";
+import MealsFeed from "./components/MealsFeed";
 import StreakPopup from "./components/StreakPopup";
 import ProfileLogin from "./components/ProfileLogin";
 import {
@@ -158,11 +159,12 @@ export default function App() {
   const challengeProgress = Math.min(Math.max((dayNumber / totalDays) * 100, 0), 100);
   const users = Object.values(visibleData);
   const todayCheckIns = users.filter((user) => user.gymDays[today]).length;
-  const todayMealLogs = users.filter((user) => (user.calories[today] || []).length > 0).length;
+  const todayMealLogs = users.reduce((count, user) => count + (user.calories[today] || []).length, 0);
   const selectedProfile = activeUser ? getUserProfile(activeUser) : null;
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: "📊" },
+    { id: "meals", label: "Meals", icon: "🍽️" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
     { id: "graph", label: "Graph", icon: "📈" },
   ];
@@ -318,7 +320,7 @@ export default function App() {
                 <p className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
                   {todayMealLogs}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">logged today</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">meals logged today</p>
               </div>
             </div>
           </div>
@@ -350,7 +352,9 @@ export default function App() {
           </section>
         ) : (
           <section className="grid gap-5">
-            {activeTab === "leaderboard" ? (
+            {activeTab === "meals" ? (
+              <MealsFeed activeUser={activeUser} data={visibleData} />
+            ) : activeTab === "leaderboard" ? (
               <Leaderboard data={visibleData} />
             ) : (
               <LeaderboardGraph data={visibleData} darkMode={darkMode} />

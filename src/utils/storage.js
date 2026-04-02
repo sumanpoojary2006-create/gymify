@@ -24,6 +24,26 @@ function getDefaultUserData(name) {
   };
 }
 
+function normalizeCalorieEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  return {
+    dish: entry.dish || "Meal",
+    calories: Number(entry.calories) || 0,
+    breakdown: Array.isArray(entry.breakdown) ? entry.breakdown : [],
+    source: entry.source || "local",
+    confidence: entry.confidence || "medium",
+    notes: Array.isArray(entry.notes) ? entry.notes : [],
+    userNote: entry.userNote || "",
+    usedPhoto: Boolean(entry.usedPhoto),
+    photoDataUrl: entry.photoDataUrl || "",
+    time: entry.time || "",
+    timestamp: Number(entry.timestamp) || 0,
+  };
+}
+
 export function getStartDate() {
   return START_DATE;
 }
@@ -67,12 +87,19 @@ export function createDefaultData() {
 }
 
 function normalizeUserData(name, userData = {}) {
+  const normalizedCalories = Object.fromEntries(
+    Object.entries(userData.calories || {}).map(([dateStr, entries]) => [
+      dateStr,
+      Array.isArray(entries) ? entries.map(normalizeCalorieEntry).filter(Boolean) : [],
+    ])
+  );
+
   return {
     ...getDefaultUserData(name),
     ...userData,
     gymDays: userData.gymDays || {},
     weights: userData.weights || {},
-    calories: userData.calories || {},
+    calories: normalizedCalories,
     auth: {
       ...getDefaultUserData(name).auth,
       ...(userData.auth || {}),
@@ -186,6 +213,25 @@ export function getTodayCalories(calorieEntries) {
 export function getTodayCalorieEntries(calorieEntries) {
   const today = getTodayStr();
   return calorieEntries[today] || [];
+}
+
+export function getMealEntriesForDate(data, dateStr, activeUser = "") {
+  return Object.values(data)
+    .filter((user) => user?.name && user.name !== activeUser)
+    .flatMap((user) =>
+      (user.calories?.[dateStr] || []).map((entry, index) => ({
+        ...normalizeCalorieEntry(entry),
+        userName: user.name,
+        index,
+      }))
+    )
+    .sort((first, second) => {
+      if ((second.timestamp || 0) !== (first.timestamp || 0)) {
+        return (second.timestamp || 0) - (first.timestamp || 0);
+      }
+
+      return (second.index || 0) - (first.index || 0);
+    });
 }
 
 export function getLatestWeight(weights) {

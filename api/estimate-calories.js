@@ -49,47 +49,6 @@ const CALORIE_RESPONSE_SCHEMA = {
   },
 };
 
-function parseImageDataUrl(imageDataUrl) {
-  const match = imageDataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
-  if (!match) {
-    throw new Error("Unsupported image format. Please try a JPG or PNG photo.");
-  }
-
-  return {
-    mimeType: match[1],
-    base64: match[2],
-  };
-}
-
-async function uploadVisionFile({ apiKey, imageDataUrl }) {
-  const { mimeType, base64 } = parseImageDataUrl(imageDataUrl);
-  const buffer = Buffer.from(base64, "base64");
-  const extension = mimeType.includes("png")
-    ? "png"
-    : mimeType.includes("webp")
-      ? "webp"
-      : "jpg";
-
-  const formData = new FormData();
-  formData.append("purpose", "vision");
-  formData.append("file", new Blob([buffer], { type: mimeType }), `meal.${extension}`);
-
-  const fileResponse = await fetch("https://api.openai.com/v1/files", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: formData,
-  });
-
-  const filePayload = await fileResponse.json();
-  if (!fileResponse.ok) {
-    throw new Error(filePayload?.error?.message || "Photo upload failed.");
-  }
-
-  return filePayload.id;
-}
-
 function getResponseText(payload) {
   if (typeof payload?.output_text === "string" && payload.output_text.trim()) {
     return payload.output_text;
@@ -144,20 +103,15 @@ export default async function handler(request, response) {
   const requestBody =
     typeof request.body === "string" ? JSON.parse(request.body || "{}") : request.body || {};
   const meal = requestBody?.meal?.trim() || "";
-  const imageDataUrl = requestBody?.imageDataUrl?.trim() || "";
   const userNotes = requestBody?.userNotes?.trim() || "";
 
-  if (!meal && !imageDataUrl) {
-    return response.status(400).json({ error: "Meal text or photo is required." });
+  if (!meal) {
+    return response.status(400).json({ error: "Meal text is required." });
   }
 
   const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
   try {
-    const uploadedFileId = imageDataUrl
-      ? await uploadVisionFile({ apiKey, imageDataUrl })
-      : null;
-
     const openAiResponse = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -188,7 +142,6 @@ export default async function handler(request, response) {
                   "Estimate the calories for this meal. " +
                   (meal ? `User note: ${meal}. ` : "") +
                   (userNotes ? `Additional notes: ${userNotes}. ` : "") +
-                  "If the image is unclear, say so in notes and lower confidence. " +
                   "Always give a short meal label in the meal field.",
               },
               ...(meal
@@ -196,15 +149,6 @@ export default async function handler(request, response) {
                     {
                       type: "input_text",
                       text: `Meal description: ${meal}`,
-                    },
-                  ]
-                : []),
-              ...(imageDataUrl
-                ? [
-                    {
-                      type: "input_image",
-                      file_id: uploadedFileId,
-                      detail: "low",
                     },
                   ]
                 : []),

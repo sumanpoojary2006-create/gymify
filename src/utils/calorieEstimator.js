@@ -1,10 +1,10 @@
-export async function estimateCaloriesWithAI({ meal = "", imageDataUrl = "", userNotes = "" }) {
+export async function estimateCaloriesWithAI({ meal = "", userNotes = "" }) {
   const response = await fetch("/api/estimate-calories", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ meal, imageDataUrl, userNotes }),
+    body: JSON.stringify({ meal, userNotes }),
   });
 
   const payload = await response.json().catch(() => ({}));

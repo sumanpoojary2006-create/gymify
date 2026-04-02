@@ -65,7 +65,6 @@ async function optimizeImageForUpload(file) {
 
 export default function UserCard({ userData, darkMode, onStreakMilestone, onUpdate }) {
   const [weightInput, setWeightInput] = useState("");
-  const [calorieInputMode, setCalorieInputMode] = useState("text");
   const [dishInput, setDishInput] = useState("");
   const [mealNotesInput, setMealNotesInput] = useState("");
   const [dishPhotoName, setDishPhotoName] = useState("");
@@ -136,16 +135,6 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
     setDishPhotoDataUrl("");
   };
 
-  const handleCalorieModeChange = (mode) => {
-    setCalorieInputMode(mode);
-    setCalorieNotice(null);
-    setCalorieResult(null);
-    setDishInput("");
-    setMealNotesInput("");
-    setDishPhotoName("");
-    setDishPhotoDataUrl("");
-  };
-
   const saveCalorieEntry = async ({
     imageDataUrl = dishPhotoDataUrl,
     mealText = dishInput.trim(),
@@ -153,7 +142,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
   } = {}) => {
     const hasPhoto = Boolean(imageDataUrl);
 
-    if ((!mealText && !hasPhoto) || isEstimatingCalories) {
+    if (!mealText || isEstimatingCalories) {
       return;
     }
 
@@ -166,27 +155,15 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
       try {
         result = await estimateCaloriesWithAI({
           meal: mealText,
-          imageDataUrl,
           userNotes: notesText,
         });
         notice = {
           tone: "success",
           text: hasPhoto
-            ? `AI estimated ${result.total} calories from the meal photo.`
+            ? `AI estimated ${result.total} calories from your meal text and saved the photo with it.`
             : `AI estimated ${result.total} calories for this meal.`,
         };
       } catch (error) {
-        if (!mealText) {
-          setCalorieNotice({
-            tone: "fallback",
-            text:
-              error instanceof Error
-                ? error.message
-                : "Photo-based calorie detection could not be completed.",
-          });
-          return;
-        }
-
         result = {
           ...estimateCalories(mealText),
           source: "local",
@@ -194,9 +171,13 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
         notice = {
           tone: "fallback",
           text: hasPhoto
-            ? `Saved with local text estimate: ${result.total} calories.`
+            ? `Saved with local text estimate: ${result.total} calories and attached the photo.`
             : `Saved with local estimate: ${result.total} calories.`,
         };
+
+        if (error instanceof Error && error.message) {
+          notice.text = `${notice.text} (${error.message})`;
+        }
       }
 
       const today = getTodayStr();
@@ -210,7 +191,9 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
         notes: result.notes || [],
         userNote: notesText,
         usedPhoto: hasPhoto,
+        photoDataUrl: hasPhoto ? imageDataUrl : "",
         time: new Date().toLocaleTimeString(),
+        timestamp: Date.now(),
       };
 
       setCalorieResult(result);
@@ -239,7 +222,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
       setDishPhotoName(file.name);
       setCalorieNotice({
         tone: "success",
-        text: "Photo ready. Add optional notes, then tap Calculate cal.",
+        text: "Photo attached. Calories will be calculated from the meal text when you submit.",
       });
     } catch {
       setCalorieNotice({
@@ -253,19 +236,10 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
 
   const handleDishSubmit = async (event) => {
     event.preventDefault();
-    if (calorieInputMode === "photo") {
-      await saveCalorieEntry({
-        imageDataUrl: dishPhotoDataUrl,
-        mealText: "",
-        notesText: mealNotesInput.trim(),
-      });
-      return;
-    }
-
     await saveCalorieEntry({
-      imageDataUrl: "",
+      imageDataUrl: dishPhotoDataUrl,
       mealText: dishInput.trim(),
-      notesText: "",
+      notesText: mealNotesInput.trim(),
     });
   };
 
@@ -422,101 +396,64 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
               </span>
             </div>
 
-            <div className="mb-3 flex rounded-2xl border border-slate-200 bg-white/80 p-1 dark:border-white/10 dark:bg-white/5">
-              <button
-                type="button"
-                onClick={() => handleCalorieModeChange("text")}
-                className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                  calorieInputMode === "text"
-                    ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
-                    : "text-slate-600 dark:text-slate-300"
-                }`}
-              >
-                Text
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCalorieModeChange("photo")}
-                className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                  calorieInputMode === "photo"
-                    ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
-                    : "text-slate-600 dark:text-slate-300"
-                }`}
-              >
-                Photo
-              </button>
-            </div>
-
             <form onSubmit={handleDishSubmit} className="mb-3 space-y-3">
-              {calorieInputMode === "text" ? (
-                <div className="space-y-3">
+              <input
+                type="text"
+                placeholder='Meal name, e.g. "2 dosa and chutney"'
+                value={dishInput}
+                onChange={(event) => setDishInput(event.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+
+              <textarea
+                rows="2"
+                placeholder="Add notes (optional), e.g. homemade, extra oil, half plate"
+                value={mealNotesInput}
+                onChange={(event) => setMealNotesInput(event.target.value)}
+                className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              />
+
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-dashed border-orange-300 bg-orange-50/70 px-4 py-4 text-sm font-semibold text-orange-700 transition hover:bg-orange-100 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-200">
+                  {dishPhotoName ? "Change photo" : "Add photo (optional)"}
                   <input
-                    type="text"
-                    placeholder='Meal name, e.g. "2 dosa and chutney"'
-                    value={dishInput}
-                    onChange={(event) => setDishInput(event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handlePhotoChange}
+                    className="hidden"
                   />
+                </label>
 
-                  <button
-                    type="submit"
-                    disabled={isEstimatingCalories || !dishInput.trim()}
-                    className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {isEstimatingCalories ? "Estimating..." : "OK"}
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-dashed border-orange-300 bg-orange-50/70 px-4 py-4 text-sm font-semibold text-orange-700 transition hover:bg-orange-100 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-200">
-                    {dishPhotoName ? "Retake photo" : "Take picture"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={handlePhotoChange}
-                      className="hidden"
+                {dishPhotoDataUrl && (
+                  <div className="space-y-3">
+                    <img
+                      src={dishPhotoDataUrl}
+                      alt="Selected meal"
+                      className="h-32 w-full rounded-2xl object-cover shadow-sm"
                     />
-                  </label>
 
-                  {dishPhotoDataUrl && (
-                    <div className="space-y-3">
-                      <img
-                        src={dishPhotoDataUrl}
-                        alt="Selected meal"
-                        className="h-32 w-full rounded-2xl object-cover shadow-sm"
-                      />
-
-                      <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-900/8 bg-white/70 px-3 py-2 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                        <span className="max-w-[180px] truncate">{dishPhotoName}</span>
-                        <button
-                          type="button"
-                          onClick={clearPhotoAttachment}
-                          className="font-semibold text-rose-500"
-                        >
-                          Remove
-                        </button>
-                      </div>
+                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-900/8 bg-white/70 px-3 py-2 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                      <span className="max-w-[180px] truncate">{dishPhotoName}</span>
+                      <button
+                        type="button"
+                        onClick={clearPhotoAttachment}
+                        className="font-semibold text-rose-500"
+                      >
+                        Remove
+                      </button>
                     </div>
-                  )}
+                  </div>
+                )}
+              </div>
 
-                  <textarea
-                    rows="2"
-                    placeholder="Add notes (optional), e.g. homemade, no sugar, half plate"
-                    value={mealNotesInput}
-                    onChange={(event) => setMealNotesInput(event.target.value)}
-                    className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-
-                  <button
-                    type="submit"
-                    disabled={isEstimatingCalories || !dishPhotoDataUrl}
-                    className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {isEstimatingCalories ? "Calculating..." : "Calculate cal"}
-                  </button>
-                </div>
-              )}
+              <button
+                type="submit"
+                disabled={isEstimatingCalories || !dishInput.trim()}
+                className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isEstimatingCalories ? "Calculating..." : "Calculate cal"}
+              </button>
             </form>
 
             {calorieResult && (
