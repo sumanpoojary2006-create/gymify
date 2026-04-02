@@ -8,18 +8,20 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { calculateStreak, getLeaderboardScore } from "../utils/storage";
+import { calculateStreak, getCalorieDeficitMetrics, getLeaderboardScore } from "../utils/storage";
 import { getUserProfile } from "../data/userProfiles";
 
 export default function LeaderboardGraph({ darkMode, data }) {
   const chartData = Object.values(data)
     .map((user) => {
       const profile = getUserProfile(user.name);
+      const deficitMetrics = getCalorieDeficitMetrics(user);
       return {
         name: user.name,
         score: getLeaderboardScore(user),
         totalGymDays: Object.values(user.gymDays).filter(Boolean).length,
         streak: calculateStreak(user.gymDays),
+        deficit: deficitMetrics.deficit,
         color: profile.ringColors[0],
       };
     })
@@ -37,7 +39,7 @@ export default function LeaderboardGraph({ darkMode, data }) {
           </h2>
         </div>
         <span className="rounded-full border border-slate-900/8 bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-          Score = gym days x 10 + streak
+          Score = deficit + gym days x 10 + streak
         </span>
       </div>
 
@@ -67,7 +69,7 @@ export default function LeaderboardGraph({ darkMode, data }) {
               }}
               formatter={(value, _, payload) => [
                 `${value} points`,
-                `${payload?.payload?.totalGymDays || 0} gym days, ${payload?.payload?.streak || 0} streak`,
+                `${payload?.payload?.deficit || 0} deficit, ${payload?.payload?.totalGymDays || 0} gym days, ${payload?.payload?.streak || 0} streak`,
               ]}
             />
             <Bar dataKey="score" radius={[12, 12, 4, 4]}>

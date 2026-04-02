@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { calculateTdee } from "../utils/storage";
+import { calculateBmi, calculateTdee } from "../utils/storage";
 
 const activityOptions = [
   { value: "sedentary", label: "Sedentary" },
@@ -50,6 +50,10 @@ export default function TdeeCalculator({
   }));
 
   const effectiveWeight = latestWeight?.weight || formState.weightKg;
+  const bmiResult = calculateBmi({
+    heightCm: formState.heightCm,
+    weightKg: effectiveWeight,
+  });
   const result = calculateTdee({
     ...formState,
     weightKg: effectiveWeight,
@@ -163,6 +167,27 @@ export default function TdeeCalculator({
           Add age, height, sex, and a fallback weight once. Later daily weight entries will drive
           the calculator automatically.
         </p>
+      )}
+
+      {bmiResult && (
+        <div className="mt-4 rounded-2xl border border-slate-900/8 bg-white/60 p-4 dark:border-white/10 dark:bg-white/5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                BMI
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">
+                {bmiResult.bmi}
+              </p>
+            </div>
+            <span className="rounded-full border border-sky-300/40 bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-700 dark:text-sky-300">
+              {bmiResult.category}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+            Saved with your profile and refreshed when a new daily weight is logged.
+          </p>
+        </div>
       )}
 
       {deficitSummary && (

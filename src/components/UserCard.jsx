@@ -9,6 +9,7 @@ import TdeeCalculator from "./TdeeCalculator";
 import { estimateCalories } from "../data/calorieDatabase";
 import { getUserProfile } from "../data/userProfiles";
 import {
+  calculateBmi,
   calculateStreak,
   countTruthyDates,
   getLatestWeight,
@@ -25,6 +26,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
   const [weightInput, setWeightInput] = useState("");
   const [dishInput, setDishInput] = useState("");
   const [showDetails, setShowDetails] = useState(false);
+  const [showHealthTools, setShowHealthTools] = useState(false);
   const [calorieResult, setCalorieResult] = useState(null);
 
   const { name, gymDays, weights, calories, bodyProfile } = userData;
@@ -59,8 +61,17 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
     if (isNaN(parsedWeight) || parsedWeight <= 0) return;
 
     const today = getTodayStr();
+    const bmiResult = calculateBmi({
+      heightCm: bodyProfile.heightCm,
+      weightKg: parsedWeight,
+    });
     onUpdate({
       ...userData,
+      bodyProfile: {
+        ...bodyProfile,
+        bmi: bmiResult?.bmi || bodyProfile.bmi || "",
+        bmiCategory: bmiResult?.category || bodyProfile.bmiCategory || "",
+      },
       weights: { ...weights, [today]: parsedWeight },
     });
     setWeightInput("");
@@ -90,11 +101,19 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
   };
 
   const handleBodyProfileSave = (nextBodyProfile) => {
+    const effectiveWeight = latestWeight?.weight || nextBodyProfile.weightKg;
+    const bmiResult = calculateBmi({
+      heightCm: nextBodyProfile.heightCm,
+      weightKg: effectiveWeight,
+    });
+
     onUpdate({
       ...userData,
       bodyProfile: {
         ...bodyProfile,
         ...nextBodyProfile,
+        bmi: bmiResult?.bmi || bodyProfile.bmi || "",
+        bmiCategory: bmiResult?.category || bodyProfile.bmiCategory || "",
       },
     });
   };
@@ -286,12 +305,35 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
             <CalorieChart calories={calories} darkMode={darkMode} />
           </div>
 
-          <TdeeCalculator
-            bodyProfile={bodyProfile}
-            latestWeight={latestWeight}
-            todayCalories={todayCalories}
-            onSaveBodyProfile={handleBodyProfileSave}
-          />
+          <div className="soft-panel rounded-[24px] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h4 className="font-display text-base font-semibold text-slate-950 dark:text-white">
+                  Health tools
+                </h4>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Open TDEE, BMI, and deficit analysis only when you need it.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowHealthTools(!showHealthTools)}
+                className="rounded-2xl border border-slate-900/8 bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:opacity-95 dark:border-white/10 dark:bg-white dark:text-slate-950"
+              >
+                {showHealthTools ? "Hide" : "Open"}
+              </button>
+            </div>
+
+            {showHealthTools && (
+              <div className="mt-4">
+                <TdeeCalculator
+                  bodyProfile={bodyProfile}
+                  latestWeight={latestWeight}
+                  todayCalories={todayCalories}
+                  onSaveBodyProfile={handleBodyProfileSave}
+                />
+              </div>
+            )}
+          </div>
         </MotionDiv>
       )}
     </MotionDiv>

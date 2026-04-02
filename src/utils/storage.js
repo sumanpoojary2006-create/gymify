@@ -16,6 +16,8 @@ function getDefaultUserData(name) {
       weightKg: "",
       sex: "",
       activity: "moderate",
+      bmi: "",
+      bmiCategory: "",
     },
     badges: [],
   };
@@ -154,6 +156,11 @@ export function getTodayCalories(calorieEntries) {
   return entries.reduce((sum, e) => sum + (e.calories || 0), 0);
 }
 
+export function getTodayCalorieEntries(calorieEntries) {
+  const today = getTodayStr();
+  return calorieEntries[today] || [];
+}
+
 export function getLatestWeight(weights) {
   const dates = Object.keys(weights).sort();
   if (dates.length === 0) return null;
@@ -163,7 +170,8 @@ export function getLatestWeight(weights) {
 export function getLeaderboardScore(userData) {
   const totalGymDays = Object.values(userData.gymDays || {}).filter(Boolean).length;
   const streak = calculateStreak(userData.gymDays || {});
-  return totalGymDays * 10 + streak;
+  const deficitMetrics = getCalorieDeficitMetrics(userData);
+  return totalGymDays * 10 + streak + deficitMetrics.deficit;
 }
 
 export function getActivityMultiplier(activity) {
@@ -198,6 +206,63 @@ export function calculateTdee({ activity, age, heightCm, sex, weightKg }) {
   return {
     bmr: Math.round(baseBmr),
     tdee: Math.round(tdee),
+  };
+}
+
+export function calculateBmi({ heightCm, weightKg }) {
+  const parsedHeight = Number(heightCm);
+  const parsedWeight = Number(weightKg);
+
+  if (!parsedHeight || !parsedWeight) {
+    return null;
+  }
+
+  const heightM = parsedHeight / 100;
+  const bmi = parsedWeight / (heightM * heightM);
+  const roundedBmi = Number(bmi.toFixed(1));
+
+  let category = "Obese";
+  if (roundedBmi < 18.5) category = "Underweight";
+  else if (roundedBmi < 25) category = "Normal";
+  else if (roundedBmi < 30) category = "Overweight";
+
+  return {
+    bmi: roundedBmi,
+    category,
+  };
+}
+
+export function getCalorieDeficitMetrics(userData) {
+  const latestWeight = getLatestWeight(userData.weights || {});
+  const effectiveWeight = latestWeight?.weight || userData.bodyProfile?.weightKg;
+  const tdeeResult = calculateTdee({
+    activity: userData.bodyProfile?.activity,
+    age: userData.bodyProfile?.age,
+    heightCm: userData.bodyProfile?.heightCm,
+    sex: userData.bodyProfile?.sex,
+    weightKg: effectiveWeight,
+  });
+  const todayEntries = getTodayCalorieEntries(userData.calories || {});
+  const intake = todayEntries.reduce((sum, entry) => sum + (entry.calories || 0), 0);
+
+  if (!tdeeResult || todayEntries.length === 0) {
+    return {
+      tdee: tdeeResult?.tdee || null,
+      intake,
+      deficit: 0,
+      surplus: 0,
+      hasCalorieLog: todayEntries.length > 0,
+    };
+  }
+
+  const difference = Math.round(tdeeResult.tdee - intake);
+
+  return {
+    tdee: tdeeResult.tdee,
+    intake,
+    deficit: Math.max(difference, 0),
+    surplus: Math.max(-difference, 0),
+    hasCalorieLog: true,
   };
 }
 
