@@ -1,4 +1,4 @@
-import { calculateStreak, getTodayCalories } from "../utils/storage";
+import { calculateStreak, getLeaderboardScore, getTodayCalories } from "../utils/storage";
 import { getUserProfile } from "../data/userProfiles";
 
 export default function Leaderboard({ data }) {
@@ -8,15 +8,16 @@ export default function Leaderboard({ data }) {
     totalGymDays: Object.values(user.gymDays).filter(Boolean).length,
     todayCalories: getTodayCalories(user.calories),
     weightEntries: Object.keys(user.weights).length,
+    score: getLeaderboardScore(user),
     profile: getUserProfile(user.name),
   }));
 
   const sorted = [...users].sort((first, second) => {
-    if (second.totalGymDays !== first.totalGymDays) {
-      return second.totalGymDays - first.totalGymDays;
+    if (second.score !== first.score) {
+      return second.score - first.score;
     }
 
-    return second.streak - first.streak;
+    return second.totalGymDays - first.totalGymDays;
   });
 
   const podium = ["🥇", "🥈", "🥉"];
@@ -33,7 +34,7 @@ export default function Leaderboard({ data }) {
           </h2>
         </div>
         <span className="rounded-full border border-slate-900/8 bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-          Ranked by gym days, then streak
+          Score = gym days x 10 + streak
         </span>
       </div>
 
@@ -66,9 +67,9 @@ export default function Leaderboard({ data }) {
               </div>
 
               <div className="text-right">
-                <p className="text-2xl font-semibold">{user.totalGymDays}</p>
+                <p className="text-2xl font-semibold">{user.score}</p>
                 <p className={index === 0 ? "text-sm text-white/70" : "text-sm text-slate-500 dark:text-slate-400"}>
-                  gym days
+                  leaderboard score
                 </p>
               </div>
             </div>

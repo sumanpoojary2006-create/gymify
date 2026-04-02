@@ -149,6 +149,12 @@ export function getLatestWeight(weights) {
   return { date: dates[dates.length - 1], weight: weights[dates[dates.length - 1]] };
 }
 
+export function getLeaderboardScore(userData) {
+  const totalGymDays = Object.values(userData.gymDays || {}).filter(Boolean).length;
+  const streak = calculateStreak(userData.gymDays || {});
+  return totalGymDays * 10 + streak;
+}
+
 // Badge logic
 export function computeBadges(userData) {
   const badges = [];

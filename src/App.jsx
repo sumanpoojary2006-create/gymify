@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import UserCard from "./components/UserCard";
 import Leaderboard from "./components/Leaderboard";
+import LeaderboardGraph from "./components/LeaderboardGraph";
 import StreakPopup from "./components/StreakPopup";
 import ProfileLogin from "./components/ProfileLogin";
 import {
@@ -104,6 +105,7 @@ export default function App() {
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: "📊" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
+    { id: "graph", label: "Graph", icon: "📈" },
   ];
 
   if (!selectedUser) {
@@ -288,7 +290,11 @@ export default function App() {
           </section>
         ) : (
           <section className="grid gap-5">
-            <Leaderboard data={data} />
+            {activeTab === "leaderboard" ? (
+              <Leaderboard data={data} />
+            ) : (
+              <LeaderboardGraph data={data} darkMode={darkMode} />
+            )}
           </section>
         )}
       </main>
