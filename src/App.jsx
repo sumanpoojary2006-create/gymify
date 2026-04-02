@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import UserCard from "./components/UserCard";
+import SpotlightCard from "./components/SpotlightCard";
 import Leaderboard from "./components/Leaderboard";
 import StreakPopup from "./components/StreakPopup";
 import ChallengeHero from "./components/ChallengeHero";
@@ -14,24 +15,21 @@ import {
   getTodayStr,
   getTotalDays,
 } from "./utils/storage";
-import {
-  isFirebaseReady,
-  saveToFirebase,
-  subscribeToFirebase,
-} from "./utils/firebase";
+import { getUserProfile } from "./data/userProfiles";
+import { isFirebaseReady, saveToFirebase, subscribeToFirebase } from "./utils/firebase";
 
 const MotionDiv = motion.div;
 const MotionH1 = motion.h1;
 const MotionSpan = motion.span;
 const MotionMain = motion.main;
 
-function App() {
+export default function App() {
+  const userNames = useMemo(() => getUserNames(), []);
   const [data, setData] = useState(loadData);
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("lean-challenge-dark") === "true";
-  });
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("lean-challenge-dark") === "true");
   const [streakPopup, setStreakPopup] = useState(null);
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("crew");
+  const [selectedUser, setSelectedUser] = useState(() => userNames[0]);
   const cloudSyncEnabled = isFirebaseReady();
   const [cloudHydrated, setCloudHydrated] = useState(() => !cloudSyncEnabled);
   const lastRemoteSnapshotRef = useRef(null);
@@ -45,9 +43,9 @@ function App() {
 
       lastRemoteSnapshotRef.current = nextDataJson;
       setCloudHydrated(true);
-      setData((prev) => {
-        const prevJson = JSON.stringify(prev);
-        return prevJson === nextDataJson ? prev : nextData;
+      setData((previousData) => {
+        const previousJson = JSON.stringify(previousData);
+        return previousJson === nextDataJson ? previousData : nextData;
       });
 
       if (!remoteData) {
@@ -75,7 +73,7 @@ function App() {
   }, [darkMode]);
 
   const handleUserUpdate = useCallback((name, newUserData) => {
-    setData((prev) => ({ ...prev, [name]: newUserData }));
+    setData((previousData) => ({ ...previousData, [name]: newUserData }));
   }, []);
 
   const handleStreakMilestone = useCallback((name, streak) => {
@@ -91,6 +89,14 @@ function App() {
   const users = Object.values(data);
   const todayCheckIns = users.filter((user) => user.gymDays[today]).length;
   const todayCalorieLogs = users.filter((user) => (user.calories[today] || []).length > 0).length;
+  const selectedProfile = getUserProfile(selectedUser);
+  const selectedUserData = data[selectedUser];
+
+  const tabs = [
+    { id: "crew", label: "Crew", icon: "👥" },
+    { id: "studio", label: "Studio", icon: "🎯" },
+    { id: "leaderboard", label: "Leaderboard", icon: "🏁" },
+  ];
 
   return (
     <div
@@ -105,7 +111,6 @@ function App() {
         <div className="noise-overlay" />
       </div>
 
-      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-slate-900/8 bg-white/65 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/70">
         <div className="mx-auto max-w-7xl px-4 py-4 md:px-6">
           <div className="flex items-center justify-between gap-4">
@@ -133,12 +138,8 @@ function App() {
                 {cloudSyncEnabled ? "Shared cloud sync" : "Local-only mode"}
               </span>
 
-              {/* Tab nav */}
               <nav className="hidden rounded-full border border-slate-900/8 bg-white/65 p-1 shadow-[0_12px_30px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/5 sm:flex">
-                {[
-                  { id: "dashboard", label: "Dashboard", icon: "⚡" },
-                  { id: "leaderboard", label: "Leaderboard", icon: "🏁" },
-                ].map((tab) => (
+                {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
@@ -154,7 +155,6 @@ function App() {
                 ))}
               </nav>
 
-              {/* Dark mode toggle */}
               <button
                 onClick={() => setDarkMode(!darkMode)}
                 className="rounded-full border border-slate-900/8 bg-white/75 p-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition-colors hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
@@ -172,7 +172,6 @@ function App() {
             </div>
           </div>
 
-          {/* Challenge progress bar */}
           <div className="mt-4">
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-900/8 dark:bg-white/10">
               <MotionDiv
@@ -193,7 +192,6 @@ function App() {
         </div>
       </header>
 
-      {/* Main content */}
       <MotionMain
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -201,30 +199,95 @@ function App() {
       >
         <ChallengeHero data={data} cloudSyncEnabled={cloudSyncEnabled} />
 
-        {activeTab === "dashboard" ? (
-          <>
-            <WeeklyChallenges data={data} />
+        {activeTab === "crew" && (
+          <section className="space-y-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                  Main cast
+                </p>
+                <h2 className="mt-2 font-display text-2xl font-semibold text-slate-950 dark:text-white">
+                  Start with the three people who shape the whole challenge
+                </h2>
+              </div>
+              <p className="max-w-md text-sm leading-6 text-slate-600 dark:text-slate-300">
+                The key personal details live here. Open the studio tab only when you want to go
+                deeper into tracking and charts.
+              </p>
+            </div>
 
-            <section className="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-2">
-                {getUserNames().map((name) => (
-                  <UserCard
-                    key={name}
-                    userData={data[name]}
-                    darkMode={darkMode}
-                    onUpdate={(newData) => handleUserUpdate(name, newData)}
-                    onStreakMilestone={(streak) => handleStreakMilestone(name, streak)}
-                  />
-                ))}
+            <div className="grid gap-6 xl:grid-cols-3">
+              {userNames.map((name) => (
+                <SpotlightCard
+                  key={name}
+                  isSelected={selectedUser === name}
+                  onOpenStudio={() => {
+                    setSelectedUser(name);
+                    setActiveTab("studio");
+                  }}
+                  userData={data[name]}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {activeTab === "studio" && selectedUserData && (
+          <section className="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
+            <div className="space-y-5">
+              <div className="rounded-[28px] border border-white/55 bg-white/76 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/68">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                      Progress studio
+                    </p>
+                    <h2 className="mt-2 font-display text-2xl font-semibold text-slate-950 dark:text-white">
+                      Detailed tracker for {selectedUser}
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                      {selectedProfile.goal}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {userNames.map((name) => {
+                      const profile = getUserProfile(name);
+                      return (
+                        <button
+                          key={name}
+                          onClick={() => setSelectedUser(name)}
+                          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                            selectedUser === name
+                              ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
+                              : "border border-slate-900/8 bg-slate-900/4 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                          }`}
+                        >
+                          <span className="mr-2">{profile.emoji}</span>
+                          {name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
-              <div className="xl:sticky xl:top-32 xl:self-start">
-                <Leaderboard data={data} />
-              </div>
-            </section>
-          </>
-        ) : (
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+              <UserCard
+                key={selectedUser}
+                userData={selectedUserData}
+                darkMode={darkMode}
+                onUpdate={(newData) => handleUserUpdate(selectedUser, newData)}
+                onStreakMilestone={(streak) => handleStreakMilestone(selectedUser, streak)}
+              />
+            </div>
+
+            <div className="space-y-6 xl:sticky xl:top-32 xl:self-start">
+              <WeeklyChallenges data={data} />
+              <Leaderboard data={data} />
+            </div>
+          </section>
+        )}
+
+        {activeTab === "leaderboard" && (
+          <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
             <Leaderboard data={data} />
             <WeeklyChallenges data={data} />
           </div>
@@ -232,10 +295,7 @@ function App() {
       </MotionMain>
 
       <nav className="fixed inset-x-4 bottom-4 z-40 flex rounded-full border border-slate-900/10 bg-white/88 p-1.5 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/88 sm:hidden">
-        {[
-          { id: "dashboard", label: "Dashboard", icon: "⚡" },
-          { id: "leaderboard", label: "Leaderboard", icon: "🏁" },
-        ].map((tab) => (
+        {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -251,7 +311,6 @@ function App() {
         ))}
       </nav>
 
-      {/* Streak Popup */}
       {streakPopup && (
         <StreakPopup
           show={!!streakPopup}
@@ -263,5 +322,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
