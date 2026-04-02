@@ -140,7 +140,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
   } = {}) => {
     const hasPhoto = Boolean(imageDataUrl);
 
-    if (!mealText || isEstimatingCalories) {
+    if ((!mealText && !imageDataUrl) || isEstimatingCalories) {
       return;
     }
 
@@ -151,12 +151,14 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
         const result = await estimateCaloriesWithAI({
           meal: mealText,
           userNotes: notesText,
+          photoBase64: hasPhoto ? imageDataUrl : "",
         });
+        const sourceLabel = result.source === "ai" ? "AI" : "local database";
         const notice = {
           tone: "success",
           text: hasPhoto
-            ? `AI verified this meal and estimated ${result.total} calories. The photo was saved with it.`
-            : `AI verified this meal and estimated ${result.total} calories.`,
+            ? `${sourceLabel} estimated ${result.total} calories from your photo + description.`
+            : `${sourceLabel} estimated ${result.total} calories.`,
         };
 
         const today = getTodayStr();
@@ -165,7 +167,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
           dish: result.meal || mealText || "Meal",
           calories: result.total,
           breakdown: result.breakdown,
-          source: "ai",
+          source: result.source || "ai",
           confidence: result.confidence || "medium",
           notes: result.notes || [],
           userNote: notesText,

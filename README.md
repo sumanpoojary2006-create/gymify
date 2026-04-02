@@ -51,14 +51,14 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
 ```
 
-Optional AI calorie estimation:
+Optional AI calorie estimation with Gemini:
 
 ```bash
-OPENAI_API_KEY=your-openai-api-key
-OPENAI_MODEL=gpt-4o-mini
+GEMINI_API_KEY=your-gemini-api-key
+GEMINI_MODEL=gemini-2.5-flash
 ```
 
-If `OPENAI_API_KEY` is set in Vercel, meal logging will call the private `/api/estimate-calories` endpoint for AI estimates. If it is missing, the app falls back to the built-in local food table.
+If `GEMINI_API_KEY` is set in Vercel, meal logging will call the private `/api/estimate-calories` endpoint for AI estimates using text and an optional meal photo.
 
 ## Firebase Rules
 
@@ -88,7 +88,7 @@ You can host this as a static site on Vercel or Netlify.
 3. Set the build command to `npm run build`.
 4. Set the output directory to `dist`.
 5. Add all `VITE_FIREBASE_*` environment variables in Vercel.
-6. Add `OPENAI_API_KEY` if you want AI calorie estimation.
+6. Add `GEMINI_API_KEY` if you want AI calorie estimation.
 7. Deploy and share the public URL.
 
 ### Netlify
@@ -98,7 +98,7 @@ You can host this as a static site on Vercel or Netlify.
 3. Set the build command to `npm run build`.
 4. Set the publish directory to `dist`.
 5. Add all `VITE_FIREBASE_*` environment variables in Netlify.
-6. Add `OPENAI_API_KEY` if you want AI calorie estimation.
+6. Add `GEMINI_API_KEY` if you want AI calorie estimation.
 7. Deploy and share the public URL.
 
 ## Build
