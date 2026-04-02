@@ -4,6 +4,7 @@ import UserCard from "./components/UserCard";
 import Leaderboard from "./components/Leaderboard";
 import MealsFeed from "./components/MealsFeed";
 import ProfileSection from "./components/ProfileSection";
+import WorkoutHelperModal from "./components/WorkoutHelperModal";
 import StreakPopup from "./components/StreakPopup";
 import ProfileLogin from "./components/ProfileLogin";
 import {
@@ -30,6 +31,7 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("lean-challenge-dark") === "true");
   const [streakPopup, setStreakPopup] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [showWorkoutHelper, setShowWorkoutHelper] = useState(false);
   const [selectedUser, setSelectedUser] = useState(() => {
     const savedUser = localStorage.getItem(SELECTED_USER_KEY);
     return savedUser || "";
@@ -231,13 +233,20 @@ export default function App() {
         <div className="mx-auto max-w-5xl px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <MotionH1
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="font-display text-xl font-semibold tracking-tight text-slate-950 dark:text-white md:text-2xl"
+              <button
+                type="button"
+                onClick={() => setShowWorkoutHelper(true)}
+                className="rounded-2xl px-1 py-1 text-left transition hover:opacity-85"
+                title="Open AI workout help"
               >
-                Gymify
-              </MotionH1>
+                <MotionH1
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="font-display text-xl font-semibold tracking-tight text-slate-950 dark:text-white md:text-2xl"
+                >
+                  Gymify
+                </MotionH1>
+              </button>
               <span className="hidden rounded-full border border-slate-900/8 bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 sm:inline-flex">
                 {currentMonthLabel}
               </span>
@@ -415,6 +424,8 @@ export default function App() {
           onClose={closeStreakPopup}
         />
       )}
+
+      <WorkoutHelperModal open={showWorkoutHelper} onClose={() => setShowWorkoutHelper(false)} />
     </div>
   );
 }

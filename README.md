@@ -51,14 +51,14 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
 ```
 
-Optional AI calorie estimation with Gemini:
+Optional Gemini features:
 
 ```bash
 GEMINI_API_KEY=your-gemini-api-key
 GEMINI_MODEL=gemini-2.5-flash
 ```
 
-If `GEMINI_API_KEY` is set in Vercel, meal logging will call the private `/api/estimate-calories` endpoint for AI estimates using text and an optional meal photo.
+If `GEMINI_API_KEY` is set in Vercel, meal logging will call the private `/api/estimate-calories` endpoint for AI estimates using text and an optional meal photo. The Gymify logo also opens an AI workout helper powered by Gemini.
 
 ## Firebase Rules
 
