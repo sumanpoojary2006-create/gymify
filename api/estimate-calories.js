@@ -110,7 +110,7 @@ export default async function handler(request, response) {
     return response.status(400).json({ error: "Meal text or photo is required." });
   }
 
-  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+  const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
   try {
     const openAiResponse = await fetch("https://api.openai.com/v1/responses", {

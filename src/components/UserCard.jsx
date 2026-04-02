@@ -34,6 +34,7 @@ function readFileAsDataUrl(file) {
 
 export default function UserCard({ userData, darkMode, onStreakMilestone, onUpdate }) {
   const [weightInput, setWeightInput] = useState("");
+  const [calorieInputMode, setCalorieInputMode] = useState("text");
   const [dishInput, setDishInput] = useState("");
   const [mealNotesInput, setMealNotesInput] = useState("");
   const [dishPhotoName, setDishPhotoName] = useState("");
@@ -104,8 +105,21 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
     setDishPhotoDataUrl("");
   };
 
-  const saveCalorieEntry = async ({ imageDataUrl = dishPhotoDataUrl, mealText = dishInput.trim() } = {}) => {
-    const notesText = mealNotesInput.trim();
+  const handleCalorieModeChange = (mode) => {
+    setCalorieInputMode(mode);
+    setCalorieNotice(null);
+    setCalorieResult(null);
+    setDishInput("");
+    setMealNotesInput("");
+    setDishPhotoName("");
+    setDishPhotoDataUrl("");
+  };
+
+  const saveCalorieEntry = async ({
+    imageDataUrl = dishPhotoDataUrl,
+    mealText = dishInput.trim(),
+    notesText = mealNotesInput.trim(),
+  } = {}) => {
     const hasPhoto = Boolean(imageDataUrl);
 
     if ((!mealText && !hasPhoto) || isEstimatingCalories) {
@@ -191,10 +205,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
       setDishPhotoName(file.name);
       setCalorieNotice({
         tone: "success",
-        text: "Photo attached. Estimating calories now...",
-      });
-      await saveCalorieEntry({
-        imageDataUrl: dataUrl,
+        text: "Photo ready. Add optional notes, then tap Calculate cal.",
       });
     } catch {
       setCalorieNotice({
@@ -208,7 +219,20 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
 
   const handleDishSubmit = async (event) => {
     event.preventDefault();
-    await saveCalorieEntry();
+    if (calorieInputMode === "photo") {
+      await saveCalorieEntry({
+        imageDataUrl: dishPhotoDataUrl,
+        mealText: "",
+        notesText: mealNotesInput.trim(),
+      });
+      return;
+    }
+
+    await saveCalorieEntry({
+      imageDataUrl: "",
+      mealText: dishInput.trim(),
+      notesText: "",
+    });
   };
 
   const handleBodyProfileSave = (nextBodyProfile) => {
@@ -364,27 +388,54 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
               </span>
             </div>
 
-            <form onSubmit={handleDishSubmit} className="mb-3 flex gap-2">
-              <div className="flex-1 space-y-2">
-                <input
-                  type="text"
-                  placeholder='Meal name, e.g. "2 dosa and chutney"'
-                  value={dishInput}
-                  onChange={(event) => setDishInput(event.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
+            <div className="mb-3 flex rounded-2xl border border-slate-200 bg-white/80 p-1 dark:border-white/10 dark:bg-white/5">
+              <button
+                type="button"
+                onClick={() => handleCalorieModeChange("text")}
+                className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  calorieInputMode === "text"
+                    ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
+                    : "text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                Text
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCalorieModeChange("photo")}
+                className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  calorieInputMode === "photo"
+                    ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
+                    : "text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                Photo
+              </button>
+            </div>
 
-                <textarea
-                  rows="2"
-                  placeholder="Optional notes for the AI, e.g. homemade, extra oil, half portion"
-                  value={mealNotesInput}
-                  onChange={(event) => setMealNotesInput(event.target.value)}
-                  className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                />
+            <form onSubmit={handleDishSubmit} className="mb-3 space-y-3">
+              {calorieInputMode === "text" ? (
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder='Meal name, e.g. "2 dosa and chutney"'
+                    value={dishInput}
+                    onChange={(event) => setDishInput(event.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  />
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="cursor-pointer rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-orange-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                    Add photo
+                  <button
+                    type="submit"
+                    disabled={isEstimatingCalories || !dishInput.trim()}
+                    className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isEstimatingCalories ? "Estimating..." : "OK"}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-dashed border-orange-300 bg-orange-50/70 px-4 py-4 text-sm font-semibold text-orange-700 transition hover:bg-orange-100 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-200">
+                    {dishPhotoName ? "Retake photo" : "Take picture"}
                     <input
                       type="file"
                       accept="image/*"
@@ -394,36 +445,44 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
                     />
                   </label>
 
-                  {dishPhotoName && (
-                    <div className="flex items-center gap-2 rounded-2xl border border-slate-900/8 bg-white/70 px-3 py-2 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                      <span className="max-w-[140px] truncate">{dishPhotoName}</span>
-                      <button
-                        type="button"
-                        onClick={clearPhotoAttachment}
-                        className="font-semibold text-rose-500"
-                      >
-                        Remove
-                      </button>
+                  {dishPhotoDataUrl && (
+                    <div className="space-y-3">
+                      <img
+                        src={dishPhotoDataUrl}
+                        alt="Selected meal"
+                        className="h-32 w-full rounded-2xl object-cover shadow-sm"
+                      />
+
+                      <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-900/8 bg-white/70 px-3 py-2 text-xs text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                        <span className="max-w-[180px] truncate">{dishPhotoName}</span>
+                        <button
+                          type="button"
+                          onClick={clearPhotoAttachment}
+                          className="font-semibold text-rose-500"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   )}
-                </div>
 
-                {dishPhotoDataUrl && (
-                  <img
-                    src={dishPhotoDataUrl}
-                    alt="Selected meal"
-                    className="h-24 w-24 rounded-2xl object-cover shadow-sm"
+                  <textarea
+                    rows="2"
+                    placeholder="Add notes (optional), e.g. homemade, no sugar, half plate"
+                    value={mealNotesInput}
+                    onChange={(event) => setMealNotesInput(event.target.value)}
+                    className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   />
-                )}
-              </div>
 
-              <button
-                type="submit"
-                disabled={isEstimatingCalories}
-                className="self-start rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isEstimatingCalories ? "Estimating..." : "OK"}
-              </button>
+                  <button
+                    type="submit"
+                    disabled={isEstimatingCalories || !dishPhotoDataUrl}
+                    className="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isEstimatingCalories ? "Calculating..." : "Calculate cal"}
+                  </button>
+                </div>
+              )}
             </form>
 
             {calorieResult && (
