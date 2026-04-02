@@ -18,6 +18,110 @@ const levelOptions = [
 
 const workoutCountOptions = [4, 5, 6, 7, 8];
 
+function getExerciseTheme(name, split) {
+  const lowerName = name.toLowerCase();
+
+  if (
+    lowerName.includes("squat") ||
+    lowerName.includes("lunge") ||
+    lowerName.includes("deadlift") ||
+    lowerName.includes("rdl") ||
+    lowerName.includes("leg") ||
+    lowerName.includes("calf")
+  ) {
+    return {
+      category: "LEGS",
+      accent: "#f97316",
+      glow: "#fed7aa",
+      panel: "#fff7ed",
+    };
+  }
+
+  if (
+    lowerName.includes("row") ||
+    lowerName.includes("pull") ||
+    lowerName.includes("lat") ||
+    lowerName.includes("curl") ||
+    lowerName.includes("rear delt") ||
+    lowerName.includes("face pull")
+  ) {
+    return {
+      category: "PULL",
+      accent: "#0f766e",
+      glow: "#99f6e4",
+      panel: "#f0fdfa",
+    };
+  }
+
+  if (
+    lowerName.includes("press") ||
+    lowerName.includes("chest") ||
+    lowerName.includes("push") ||
+    lowerName.includes("dip") ||
+    lowerName.includes("tricep") ||
+    lowerName.includes("shoulder")
+  ) {
+    return {
+      category: "PUSH",
+      accent: "#dc2626",
+      glow: "#fecaca",
+      panel: "#fef2f2",
+    };
+  }
+
+  if (
+    split === "weight-loss" ||
+    lowerName.includes("swing") ||
+    lowerName.includes("bike") ||
+    lowerName.includes("run") ||
+    lowerName.includes("rope") ||
+    lowerName.includes("burpee") ||
+    lowerName.includes("jump")
+  ) {
+    return {
+      category: "CARDIO",
+      accent: "#7c3aed",
+      glow: "#ddd6fe",
+      panel: "#f5f3ff",
+    };
+  }
+
+  return {
+    category: split === "weight-loss" ? "CARDIO" : "GYM",
+    accent: "#2563eb",
+    glow: "#bfdbfe",
+    panel: "#eff6ff",
+  };
+}
+
+function getExerciseImageDataUrl(name, split) {
+  const theme = getExerciseTheme(name, split);
+  const title = name.length > 26 ? `${name.slice(0, 26)}...` : name;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none">
+      <defs>
+        <linearGradient id="bg" x1="18" y1="12" x2="142" y2="150" gradientUnits="userSpaceOnUse">
+          <stop stop-color="${theme.glow}" />
+          <stop offset="1" stop-color="${theme.panel}" />
+        </linearGradient>
+      </defs>
+      <rect width="160" height="160" rx="28" fill="url(#bg)" />
+      <circle cx="122" cy="36" r="24" fill="${theme.accent}" fill-opacity="0.14" />
+      <circle cx="38" cy="126" r="30" fill="${theme.accent}" fill-opacity="0.1" />
+      <rect x="28" y="60" width="104" height="12" rx="6" fill="${theme.accent}" />
+      <rect x="18" y="50" width="10" height="32" rx="4" fill="${theme.accent}" />
+      <rect x="132" y="50" width="10" height="32" rx="4" fill="${theme.accent}" />
+      <rect x="34" y="52" width="8" height="28" rx="4" fill="${theme.accent}" fill-opacity="0.75" />
+      <rect x="118" y="52" width="8" height="28" rx="4" fill="${theme.accent}" fill-opacity="0.75" />
+      <text x="20" y="28" fill="${theme.accent}" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="1.8">${theme.category}</text>
+      <text x="20" y="118" fill="#0f172a" font-family="Arial, sans-serif" font-size="15" font-weight="700">${title}</text>
+      <text x="20" y="138" fill="#475569" font-family="Arial, sans-serif" font-size="11">AI workout visual</text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
 export default function WorkoutHelperModal({ open, onClose }) {
   const [split, setSplit] = useState("push");
   const [level, setLevel] = useState("beginner");
@@ -288,6 +392,14 @@ export default function WorkoutHelperModal({ open, onClose }) {
                           <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-xs font-semibold text-white dark:bg-white dark:text-slate-950">
                             {index + 1}
                           </span>
+                          <img
+                            src={getExerciseImageDataUrl(
+                              exercise.name,
+                              generatedFor?.split || split
+                            )}
+                            alt={`${exercise.name} workout visual`}
+                            className="h-20 w-20 shrink-0 rounded-2xl border border-slate-900/8 object-cover shadow-[0_10px_24px_rgba(15,23,42,0.08)] dark:border-white/10"
+                          />
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                               <div>
