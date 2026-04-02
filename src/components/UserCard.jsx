@@ -5,6 +5,7 @@ import WeightChart from "./WeightChart";
 import CalorieChart from "./CalorieChart";
 import BadgeDisplay from "./BadgeDisplay";
 import ProgressRing from "./ProgressRing";
+import TdeeCalculator from "./TdeeCalculator";
 import { estimateCalories } from "../data/calorieDatabase";
 import { getUserProfile } from "../data/userProfiles";
 import {
@@ -26,7 +27,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
   const [showDetails, setShowDetails] = useState(false);
   const [calorieResult, setCalorieResult] = useState(null);
 
-  const { name, gymDays, weights, calories } = userData;
+  const { name, gymDays, weights, calories, bodyProfile } = userData;
   const profile = getUserProfile(name);
   const streak = calculateStreak(gymDays);
   const latestWeight = getLatestWeight(weights);
@@ -86,6 +87,16 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
     });
     setDishInput("");
     setTimeout(() => setCalorieResult(null), 3000);
+  };
+
+  const handleBodyProfileSave = (nextBodyProfile) => {
+    onUpdate({
+      ...userData,
+      bodyProfile: {
+        ...bodyProfile,
+        ...nextBodyProfile,
+      },
+    });
   };
 
   const todayEntries = calories[getTodayStr()] || [];
@@ -274,6 +285,13 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
 
             <CalorieChart calories={calories} darkMode={darkMode} />
           </div>
+
+          <TdeeCalculator
+            bodyProfile={bodyProfile}
+            latestWeight={latestWeight}
+            todayCalories={todayCalories}
+            onSaveBodyProfile={handleBodyProfileSave}
+          />
         </MotionDiv>
       )}
     </MotionDiv>

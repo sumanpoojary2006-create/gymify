@@ -10,6 +10,13 @@ function getDefaultUserData(name) {
     gymDays: {},       // { "2026-04-02": true, ... }
     weights: {},       // { "2026-04-02": 75.5, ... }
     calories: {},      // { "2026-04-02": [{ dish: "...", calories: 120, time: "..." }] }
+    bodyProfile: {
+      age: "",
+      heightCm: "",
+      weightKg: "",
+      sex: "",
+      activity: "moderate",
+    },
     badges: [],
   };
 }
@@ -41,6 +48,10 @@ function normalizeUserData(name, userData = {}) {
     gymDays: userData.gymDays || {},
     weights: userData.weights || {},
     calories: userData.calories || {},
+    bodyProfile: {
+      ...getDefaultUserData(name).bodyProfile,
+      ...(userData.bodyProfile || {}),
+    },
     badges: Array.isArray(userData.badges) ? userData.badges : [],
   };
 }
@@ -153,6 +164,41 @@ export function getLeaderboardScore(userData) {
   const totalGymDays = Object.values(userData.gymDays || {}).filter(Boolean).length;
   const streak = calculateStreak(userData.gymDays || {});
   return totalGymDays * 10 + streak;
+}
+
+export function getActivityMultiplier(activity) {
+  const multipliers = {
+    sedentary: 1.2,
+    light: 1.375,
+    moderate: 1.55,
+    active: 1.725,
+    athlete: 1.9,
+  };
+
+  return multipliers[activity] || multipliers.moderate;
+}
+
+export function calculateTdee({ activity, age, heightCm, sex, weightKg }) {
+  const parsedAge = Number(age);
+  const parsedHeight = Number(heightCm);
+  const parsedWeight = Number(weightKg);
+
+  if (!parsedAge || !parsedHeight || !parsedWeight || !sex) {
+    return null;
+  }
+
+  const baseBmr =
+    10 * parsedWeight +
+    6.25 * parsedHeight -
+    5 * parsedAge +
+    (sex === "male" ? 5 : -161);
+
+  const tdee = baseBmr * getActivityMultiplier(activity);
+
+  return {
+    bmr: Math.round(baseBmr),
+    tdee: Math.round(tdee),
+  };
 }
 
 // Badge logic
