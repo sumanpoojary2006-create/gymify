@@ -16,6 +16,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
   const [split, setSplit] = useState("push");
   const [workoutCount, setWorkoutCount] = useState("5");
   const [plan, setPlan] = useState(null);
+  const [generatedFor, setGeneratedFor] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -42,8 +43,13 @@ export default function WorkoutHelperModal({ open, onClose }) {
       }
 
       setPlan(payload);
+      setGeneratedFor({
+        split,
+        workoutCount,
+      });
     } catch (requestError) {
       setPlan(null);
+      setGeneratedFor(null);
       setError(requestError instanceof Error ? requestError.message : "Could not generate a workout plan.");
     } finally {
       setIsLoading(false);
@@ -53,6 +59,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
   const handleClose = () => {
     setError("");
     setPlan(null);
+    setGeneratedFor(null);
     onClose();
   };
 
@@ -63,7 +70,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
+          className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/45 px-4 py-4 backdrop-blur-sm"
           onClick={handleClose}
         >
           <MotionDiv
@@ -71,10 +78,10 @@ export default function WorkoutHelperModal({ open, onClose }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.2 }}
-            className="w-full max-w-2xl overflow-hidden rounded-[30px] border border-white/50 bg-white/92 shadow-[0_30px_90px_rgba(15,23,42,0.24)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/92"
+            className="mx-auto flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-[30px] border border-white/50 bg-white/92 shadow-[0_30px_90px_rgba(15,23,42,0.24)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/92"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-900/8 px-5 py-4 dark:border-white/10">
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-900/8 bg-white/95 px-5 py-4 backdrop-blur dark:border-white/10 dark:bg-slate-900/95">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
                   AI Workout Help
@@ -96,13 +103,18 @@ export default function WorkoutHelperModal({ open, onClose }) {
               </button>
             </div>
 
-            <div className="space-y-5 px-5 py-5">
+            <div className="min-h-0 space-y-5 overflow-y-auto px-5 py-5">
               <form onSubmit={handleGenerate} className="grid gap-4 md:grid-cols-[1fr_1fr_auto]">
                 <label className="space-y-2">
                   <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Split</span>
                   <select
                     value={split}
-                    onChange={(event) => setSplit(event.target.value)}
+                    onChange={(event) => {
+                      setSplit(event.target.value);
+                      setPlan(null);
+                      setGeneratedFor(null);
+                      setError("");
+                    }}
                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   >
                     {splitOptions.map((option) => (
@@ -119,7 +131,12 @@ export default function WorkoutHelperModal({ open, onClose }) {
                   </span>
                   <select
                     value={workoutCount}
-                    onChange={(event) => setWorkoutCount(event.target.value)}
+                    onChange={(event) => {
+                      setWorkoutCount(event.target.value);
+                      setPlan(null);
+                      setGeneratedFor(null);
+                      setError("");
+                    }}
                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
                   >
                     {workoutCountOptions.map((count) => (
@@ -142,6 +159,12 @@ export default function WorkoutHelperModal({ open, onClose }) {
               {error && (
                 <div className="rounded-2xl border border-rose-300/40 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-700 dark:text-rose-300">
                   {error}
+                </div>
+              )}
+
+              {!plan && !error && (
+                <div className="rounded-2xl border border-slate-900/8 bg-slate-50/80 px-4 py-3 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                  Pick a category, choose how many workouts you want, then tap <span className="font-semibold">Get workout</span>.
                 </div>
               )}
 
@@ -171,7 +194,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
                       </p>
                       <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
                         {
-                          splitOptions.find((option) => option.value === split)?.label
+                          splitOptions.find((option) => option.value === (generatedFor?.split || split))?.label
                         }
                       </p>
                     </div>
@@ -180,7 +203,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
                         Workouts
                       </p>
                       <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-white">
-                        {workoutCount} planned
+                        {generatedFor?.workoutCount || workoutCount} planned
                       </p>
                     </div>
                     <div className="rounded-2xl border border-slate-900/8 bg-white px-4 py-3 dark:border-white/10 dark:bg-slate-800/60">
@@ -271,7 +294,7 @@ export default function WorkoutHelperModal({ open, onClose }) {
                     </div>
                   )}
 
-                  <div className="flex justify-end">
+                  <div className="sticky bottom-0 flex justify-end border-t border-slate-900/8 bg-slate-50/95 pt-4 backdrop-blur dark:border-white/10 dark:bg-slate-900/95">
                     <button
                       type="button"
                       onClick={handleClose}
