@@ -64,11 +64,12 @@ export default function TdeeCalculator({
             TDEE calculator
           </h4>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Estimate maintenance calories and check whether today is a deficit or surplus.
+            Save these details once. After that, the calculator updates itself using the latest
+            daily weight you log.
           </p>
         </div>
         <span className="rounded-full border border-slate-900/8 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-          {latestWeight ? `Using ${latestWeight.weight} kg` : "Add weight or enter below"}
+          {latestWeight ? `Using latest weight: ${latestWeight.weight} kg` : "Using saved fallback weight"}
         </span>
       </div>
 
@@ -95,7 +96,7 @@ export default function TdeeCalculator({
           type="number"
           min="0"
           step="0.1"
-          placeholder={latestWeight ? "Manual weight override (optional)" : "Weight (kg)"}
+          placeholder="Fallback weight (kg)"
           value={formState.weightKg}
           onChange={(event) =>
             setFormState((current) => ({ ...current, weightKg: event.target.value }))
@@ -132,7 +133,7 @@ export default function TdeeCalculator({
           onClick={() => onSaveBodyProfile(formState)}
           className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:opacity-95 dark:bg-white dark:text-slate-950"
         >
-          Save TDEE details
+          Save details
         </button>
       </div>
 
@@ -159,7 +160,8 @@ export default function TdeeCalculator({
         </div>
       ) : (
         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-          Add age, height, sex, and weight to calculate maintenance calories.
+          Add age, height, sex, and a fallback weight once. Later daily weight entries will drive
+          the calculator automatically.
         </p>
       )}
 
@@ -172,8 +174,8 @@ export default function TdeeCalculator({
             </span>
           </div>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Based on today’s logged calories versus estimated maintenance. This is a helpful daily
-            estimate, not a medical diagnosis.
+            Based on today&apos;s logged calories versus estimated maintenance using the most recent
+            logged weight. This is a helpful daily estimate, not a medical diagnosis.
           </p>
         </div>
       )}
