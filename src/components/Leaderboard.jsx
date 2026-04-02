@@ -1,55 +1,101 @@
 import { calculateStreak, getTodayCalories } from "../utils/storage";
+import { getUserProfile } from "../data/userProfiles";
 
 export default function Leaderboard({ data }) {
-  const users = Object.values(data).map((u) => ({
-    name: u.name,
-    streak: calculateStreak(u.gymDays),
-    totalGymDays: Object.values(u.gymDays).filter(Boolean).length,
-    todayCalories: getTodayCalories(u.calories),
-    weightEntries: Object.keys(u.weights).length,
+  const users = Object.values(data).map((user) => ({
+    name: user.name,
+    streak: calculateStreak(user.gymDays),
+    totalGymDays: Object.values(user.gymDays).filter(Boolean).length,
+    todayCalories: getTodayCalories(user.calories),
+    weightEntries: Object.keys(user.weights).length,
+    profile: getUserProfile(user.name),
   }));
 
-  // Sort by total gym days, then streak
-  const sorted = [...users].sort((a, b) => {
-    if (b.totalGymDays !== a.totalGymDays) return b.totalGymDays - a.totalGymDays;
-    return b.streak - a.streak;
+  const sorted = [...users].sort((first, second) => {
+    if (second.totalGymDays !== first.totalGymDays) {
+      return second.totalGymDays - first.totalGymDays;
+    }
+
+    return second.streak - first.streak;
   });
 
-  const medals = ["🥇", "🥈", "🥉"];
+  const podium = ["🥇", "🥈", "🥉"];
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
-      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-        <span>🏆</span> Leaderboard
-      </h3>
-      <div className="space-y-3">
-        {sorted.map((user, i) => (
-          <div
+    <section className="rounded-[30px] border border-white/50 bg-white/74 p-5 shadow-[0_28px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/70 md:p-6">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
+            Leaderboard
+          </p>
+          <h2 className="mt-2 font-display text-2xl font-semibold text-slate-950 dark:text-white">
+            Who is setting the pace?
+          </h2>
+        </div>
+        <span className="rounded-full border border-slate-900/8 bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+          Ranked by gym days, then streak
+        </span>
+      </div>
+
+      <div className="mt-6 space-y-3">
+        {sorted.map((user, index) => (
+          <article
             key={user.name}
-            className={`flex items-center justify-between p-3 rounded-xl transition-all ${
-              i === 0
-                ? "bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-200 dark:border-amber-800"
-                : "bg-gray-50 dark:bg-slate-700/50"
+            className={`relative overflow-hidden rounded-[24px] border p-4 transition ${
+              index === 0
+                ? `border-transparent bg-gradient-to-br ${user.profile.gradient} text-white shadow-[0_24px_70px_rgba(15,23,42,0.22)]`
+                : "border-slate-900/8 bg-white/72 text-slate-950 dark:border-white/10 dark:bg-white/6 dark:text-white"
             }`}
           >
-            <div className="flex items-center gap-3">
-              <span className="text-xl">{medals[i] || `#${i + 1}`}</span>
-              <div className="text-left">
-                <p className="font-semibold text-gray-900 dark:text-white text-sm">{user.name}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {user.totalGymDays} gym days
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.22),_transparent_26%)]" />
+            <div className="relative flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/18 bg-white/14 text-2xl backdrop-blur-sm">
+                  {index < 3 ? podium[index] : user.profile.emoji}
+                </div>
+                <div>
+                  <p className="text-lg font-semibold">{user.name}</p>
+                  <p
+                    className={`text-sm ${
+                      index === 0 ? "text-white/75" : "text-slate-500 dark:text-slate-400"
+                    }`}
+                  >
+                    {user.profile.title}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <p className="text-2xl font-semibold">{user.totalGymDays}</p>
+                <p className={index === 0 ? "text-sm text-white/70" : "text-sm text-slate-500 dark:text-slate-400"}>
+                  gym days
                 </p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
-                🔥 {user.streak}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">streak</p>
+
+            <div className="relative mt-4 grid grid-cols-3 gap-2">
+              <div className={`rounded-2xl px-3 py-3 text-center ${index === 0 ? "bg-white/14" : "bg-slate-900/5 dark:bg-white/5"}`}>
+                <p className="text-lg font-semibold">🔥 {user.streak}</p>
+                <p className={`text-[11px] uppercase tracking-[0.18em] ${index === 0 ? "text-white/70" : "text-slate-500 dark:text-slate-400"}`}>
+                  streak
+                </p>
+              </div>
+              <div className={`rounded-2xl px-3 py-3 text-center ${index === 0 ? "bg-white/14" : "bg-slate-900/5 dark:bg-white/5"}`}>
+                <p className="text-lg font-semibold">{user.weightEntries}</p>
+                <p className={`text-[11px] uppercase tracking-[0.18em] ${index === 0 ? "text-white/70" : "text-slate-500 dark:text-slate-400"}`}>
+                  weigh-ins
+                </p>
+              </div>
+              <div className={`rounded-2xl px-3 py-3 text-center ${index === 0 ? "bg-white/14" : "bg-slate-900/5 dark:bg-white/5"}`}>
+                <p className="text-lg font-semibold">{user.todayCalories}</p>
+                <p className={`text-[11px] uppercase tracking-[0.18em] ${index === 0 ? "text-white/70" : "text-slate-500 dark:text-slate-400"}`}>
+                  cal today
+                </p>
+              </div>
             </div>
-          </div>
+          </article>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

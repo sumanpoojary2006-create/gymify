@@ -99,6 +99,27 @@ export function getCurrentDayNumber() {
   return getDayNumber(getTodayStr());
 }
 
+export function getRecentDateStrings(days, fromDate = new Date()) {
+  const dates = [];
+  const anchor = new Date(fromDate);
+
+  for (let index = days - 1; index >= 0; index -= 1) {
+    const current = new Date(anchor);
+    current.setDate(anchor.getDate() - index);
+    dates.push(current.toISOString().split("T")[0]);
+  }
+
+  return dates;
+}
+
+export function countTruthyDates(record, dateStrings) {
+  return dateStrings.filter((dateStr) => !!record?.[dateStr]).length;
+}
+
+export function countLoggedCalorieDays(calories, dateStrings) {
+  return dateStrings.filter((dateStr) => (calories?.[dateStr] || []).length > 0).length;
+}
+
 export function calculateStreak(gymDays) {
   const today = getTodayStr();
   let streak = 0;

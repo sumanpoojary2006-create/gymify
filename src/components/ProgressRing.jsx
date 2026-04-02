@@ -1,4 +1,13 @@
-export default function ProgressRing({ progress, size = 80, strokeWidth = 6 }) {
+import { useId } from "react";
+
+export default function ProgressRing({
+  progress,
+  size = 80,
+  strokeWidth = 6,
+  colors = ["#f97316", "#38bdf8"],
+  label,
+}) {
+  const gradientId = useId();
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (progress / 100) * circumference;
@@ -19,7 +28,7 @@ export default function ProgressRing({ progress, size = 80, strokeWidth = 6 }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="url(#gradient)"
+          stroke={`url(#${gradientId})`}
           strokeWidth={strokeWidth}
           fill="none"
           strokeLinecap="round"
@@ -28,14 +37,14 @@ export default function ProgressRing({ progress, size = 80, strokeWidth = 6 }) {
           style={{ transition: "stroke-dashoffset 0.8s ease" }}
         />
         <defs>
-          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#6366f1" />
-            <stop offset="100%" stopColor="#a855f7" />
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={colors[0]} />
+            <stop offset="100%" stopColor={colors[1]} />
           </linearGradient>
         </defs>
       </svg>
       <span className="absolute text-sm font-bold text-gray-900 dark:text-white">
-        {Math.round(progress)}%
+        {label || `${Math.round(progress)}%`}
       </span>
     </div>
   );

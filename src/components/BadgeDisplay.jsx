@@ -5,26 +5,25 @@ const MotionDiv = motion.div;
 export default function BadgeDisplay({ badges }) {
   if (badges.length === 0) {
     return (
-      <p className="text-xs text-gray-400 dark:text-gray-500 italic">
-        Keep going to unlock badges!
+      <p className="rounded-2xl border border-dashed border-slate-300/80 bg-white/55 px-4 py-4 text-sm text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+        Keep stacking days. Your first badge is closer than it feels.
       </p>
     );
   }
 
   return (
-      <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2">
       {badges.map((badge, i) => (
         <MotionDiv
           key={badge.id}
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: i * 0.1, type: "spring", damping: 12 }}
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium
-            bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700
-            dark:from-indigo-900/40 dark:to-purple-900/40 dark:text-indigo-300"
+          className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.08)]
+            dark:border-white/10 dark:bg-white/8 dark:text-slate-200"
           title={badge.label}
         >
-          <span>{badge.icon}</span>
+          <span className="text-sm">{badge.icon}</span>
           <span>{badge.label}</span>
         </MotionDiv>
       ))}

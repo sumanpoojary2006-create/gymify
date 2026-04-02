@@ -3,12 +3,15 @@ import { motion } from "framer-motion";
 import UserCard from "./components/UserCard";
 import Leaderboard from "./components/Leaderboard";
 import StreakPopup from "./components/StreakPopup";
+import ChallengeHero from "./components/ChallengeHero";
+import WeeklyChallenges from "./components/WeeklyChallenges";
 import {
   loadData,
   saveData,
   normalizeData,
   getUserNames,
   getCurrentDayNumber,
+  getTodayStr,
   getTotalDays,
 } from "./utils/storage";
 import {
@@ -20,6 +23,7 @@ import {
 const MotionDiv = motion.div;
 const MotionH1 = motion.h1;
 const MotionSpan = motion.span;
+const MotionMain = motion.main;
 
 function App() {
   const [data, setData] = useState(loadData);
@@ -83,56 +87,68 @@ function App() {
   const dayNumber = getCurrentDayNumber();
   const totalDays = getTotalDays();
   const challengeProgress = Math.min(Math.max((dayNumber / totalDays) * 100, 0), 100);
+  const today = getTodayStr();
+  const users = Object.values(data);
+  const todayCheckIns = users.filter((user) => user.gymDays[today]).length;
+  const todayCalorieLogs = users.filter((user) => (user.calories[today] || []).length > 0).length;
 
   return (
     <div
-      className={`min-h-screen transition-colors duration-300 ${
-        darkMode ? "bg-slate-900" : "bg-gray-50"
+      className={`app-shell min-h-screen transition-colors duration-300 ${
+        darkMode ? "dark bg-slate-950 text-white" : "bg-[var(--page-bg)] text-slate-950"
       }`}
     >
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="mesh-orb mesh-orb-one" />
+        <div className="mesh-orb mesh-orb-two" />
+        <div className="mesh-orb mesh-orb-three" />
+        <div className="noise-overlay" />
+      </div>
+
       {/* Header */}
-      <header className="sticky top-0 z-40 backdrop-blur-lg bg-white/80 dark:bg-slate-900/80 border-b border-gray-200 dark:border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
+      <header className="sticky top-0 z-40 border-b border-slate-900/8 bg-white/65 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/70">
+        <div className="mx-auto max-w-7xl px-4 py-4 md:px-6">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <MotionH1
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="text-xl md:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
+                className="font-display text-xl font-semibold tracking-tight text-slate-950 dark:text-white md:text-2xl"
               >
-                60 Day Lean Challenge
+                Gymify
               </MotionH1>
-              <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+              <span className="hidden items-center rounded-full border border-slate-900/8 bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 sm:inline-flex">
                 Day {Math.min(Math.max(dayNumber, 1), totalDays)}/{totalDays}
               </span>
             </div>
 
             <div className="flex items-center gap-3">
               <span
-                className={`hidden md:inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                className={`hidden md:inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
                   cloudSyncEnabled
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                    ? "border border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                    : "border border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300"
                 }`}
               >
                 {cloudSyncEnabled ? "Shared cloud sync" : "Local-only mode"}
               </span>
 
               {/* Tab nav */}
-              <nav className="hidden sm:flex bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
+              <nav className="hidden rounded-full border border-slate-900/8 bg-white/65 p-1 shadow-[0_12px_30px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/5 sm:flex">
                 {[
-                  { id: "dashboard", label: "Dashboard" },
-                  { id: "leaderboard", label: "Leaderboard" },
+                  { id: "dashboard", label: "Dashboard", icon: "⚡" },
+                  { id: "leaderboard", label: "Leaderboard", icon: "🏁" },
                 ].map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition-all ${
                       activeTab === tab.id
-                        ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm"
-                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                        ? "bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.18)] dark:bg-white dark:text-slate-950"
+                        : "text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
                     }`}
                   >
+                    <span className="mr-2">{tab.icon}</span>
                     {tab.label}
                   </button>
                 ))}
@@ -141,7 +157,7 @@ function App() {
               {/* Dark mode toggle */}
               <button
                 onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-lg bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+                className="rounded-full border border-slate-900/8 bg-white/75 p-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition-colors hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
                 title="Toggle dark mode"
               >
                 <MotionSpan
@@ -150,69 +166,90 @@ function App() {
                   animate={{ rotate: 0, opacity: 1 }}
                   className="block text-lg"
                 >
-                  {darkMode ? "☀️" : "🌙"}
+                  {darkMode ? "☀️" : "🌗"}
                 </MotionSpan>
               </button>
             </div>
           </div>
 
           {/* Challenge progress bar */}
-          <div className="mt-2">
-            <div className="w-full h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div className="mt-4">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-900/8 dark:bg-white/10">
               <MotionDiv
                 initial={{ width: 0 }}
                 animate={{ width: `${challengeProgress}%` }}
                 transition={{ duration: 1, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
+                className="h-full rounded-full bg-gradient-to-r from-orange-500 via-rose-500 to-sky-500"
               />
             </div>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 text-right">
-              {Math.round(challengeProgress)}% of challenge complete
-            </p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              <p>{Math.round(challengeProgress)}% of the full challenge is complete</p>
+              <div className="flex flex-wrap gap-2">
+                <span className="stat-pill">🔥 {todayCheckIns} checked in today</span>
+                <span className="stat-pill">🍽️ {todayCalorieLogs} meal logs today</span>
+              </div>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile tab nav */}
-      <div className="sm:hidden flex bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+      {/* Main content */}
+      <MotionMain
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="relative z-10 mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 pb-28 md:px-6 md:pb-10"
+      >
+        <ChallengeHero data={data} cloudSyncEnabled={cloudSyncEnabled} />
+
+        {activeTab === "dashboard" ? (
+          <>
+            <WeeklyChallenges data={data} />
+
+            <section className="grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-2">
+                {getUserNames().map((name) => (
+                  <UserCard
+                    key={name}
+                    userData={data[name]}
+                    darkMode={darkMode}
+                    onUpdate={(newData) => handleUserUpdate(name, newData)}
+                    onStreakMilestone={(streak) => handleStreakMilestone(name, streak)}
+                  />
+                ))}
+              </div>
+
+              <div className="xl:sticky xl:top-32 xl:self-start">
+                <Leaderboard data={data} />
+              </div>
+            </section>
+          </>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+            <Leaderboard data={data} />
+            <WeeklyChallenges data={data} />
+          </div>
+        )}
+      </MotionMain>
+
+      <nav className="fixed inset-x-4 bottom-4 z-40 flex rounded-full border border-slate-900/10 bg-white/88 p-1.5 shadow-[0_20px_60px_rgba(15,23,42,0.18)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/88 sm:hidden">
         {[
-          { id: "dashboard", label: "📊 Dashboard" },
-          { id: "leaderboard", label: "🏆 Leaderboard" },
+          { id: "dashboard", label: "Dashboard", icon: "⚡" },
+          { id: "leaderboard", label: "Leaderboard", icon: "🏁" },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-2.5 text-sm font-medium transition-all ${
+            className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition-all ${
               activeTab === tab.id
-                ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
-                : "text-gray-500 dark:text-gray-400"
+                ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
+                : "text-slate-500 dark:text-slate-300"
             }`}
           >
+            <span className="mr-2">{tab.icon}</span>
             {tab.label}
           </button>
         ))}
-      </div>
-
-      {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {activeTab === "dashboard" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {getUserNames().map((name) => (
-              <UserCard
-                key={name}
-                userData={data[name]}
-                darkMode={darkMode}
-                onUpdate={(newData) => handleUserUpdate(name, newData)}
-                onStreakMilestone={(streak) => handleStreakMilestone(name, streak)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="max-w-lg mx-auto">
-            <Leaderboard data={data} />
-          </div>
-        )}
-      </main>
+      </nav>
 
       {/* Streak Popup */}
       {streakPopup && (
