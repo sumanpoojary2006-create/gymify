@@ -6,7 +6,6 @@ import CalorieChart from "./CalorieChart";
 import BadgeDisplay from "./BadgeDisplay";
 import ProgressRing from "./ProgressRing";
 import TdeeCalculator from "./TdeeCalculator";
-import { estimateCalories } from "../data/calorieDatabase";
 import { getUserProfile } from "../data/userProfiles";
 import { estimateCaloriesWithAI } from "../utils/calorieEstimator";
 import {
@@ -149,64 +148,55 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
     setIsEstimatingCalories(true);
 
     try {
-      let result;
-      let notice;
-
       try {
-        result = await estimateCaloriesWithAI({
+        const result = await estimateCaloriesWithAI({
           meal: mealText,
           userNotes: notesText,
         });
-        notice = {
+        const notice = {
           tone: "success",
           text: hasPhoto
-            ? `AI estimated ${result.total} calories from your meal text and saved the photo with it.`
-            : `AI estimated ${result.total} calories for this meal.`,
+            ? `AI verified this meal and estimated ${result.total} calories. The photo was saved with it.`
+            : `AI verified this meal and estimated ${result.total} calories.`,
         };
+
+        const today = getTodayStr();
+        const todayEntries = calories[today] || [];
+        const newEntry = {
+          dish: result.meal || mealText || "Meal",
+          calories: result.total,
+          breakdown: result.breakdown,
+          source: "ai",
+          confidence: result.confidence || "medium",
+          notes: result.notes || [],
+          userNote: notesText,
+          usedPhoto: hasPhoto,
+          photoDataUrl: hasPhoto ? imageDataUrl : "",
+          time: new Date().toLocaleTimeString(),
+          timestamp: Date.now(),
+        };
+
+        setCalorieResult(result);
+        setCalorieNotice(notice);
+        onUpdate({
+          ...userData,
+          calories: { ...calories, [today]: [...todayEntries, newEntry] },
+        });
+        clearMealComposer();
+        setTimeout(() => {
+          setCalorieResult(null);
+          setCalorieNotice(null);
+        }, 3500);
       } catch (error) {
-        result = {
-          ...estimateCalories(mealText),
-          source: "local",
-        };
-        notice = {
-          tone: "fallback",
-          text: hasPhoto
-            ? `Saved with local text estimate: ${result.total} calories and attached the photo.`
-            : `Saved with local estimate: ${result.total} calories.`,
-        };
-
-        if (error instanceof Error && error.message) {
-          notice.text = `${notice.text} (${error.message})`;
-        }
-      }
-
-      const today = getTodayStr();
-      const todayEntries = calories[today] || [];
-      const newEntry = {
-        dish: result.meal || mealText || "Photo meal",
-        calories: result.total,
-        breakdown: result.breakdown,
-        source: result.source || "local",
-        confidence: result.confidence || "medium",
-        notes: result.notes || [],
-        userNote: notesText,
-        usedPhoto: hasPhoto,
-        photoDataUrl: hasPhoto ? imageDataUrl : "",
-        time: new Date().toLocaleTimeString(),
-        timestamp: Date.now(),
-      };
-
-      setCalorieResult(result);
-      setCalorieNotice(notice);
-      onUpdate({
-        ...userData,
-        calories: { ...calories, [today]: [...todayEntries, newEntry] },
-      });
-      clearMealComposer();
-      setTimeout(() => {
         setCalorieResult(null);
-        setCalorieNotice(null);
-      }, 3500);
+        setCalorieNotice({
+          tone: "fallback",
+          text:
+            error instanceof Error
+              ? `AI verification failed, so this meal was not saved. ${error.message}`
+              : "AI verification failed, so this meal was not saved.",
+        });
+      }
     } finally {
       setIsEstimatingCalories(false);
     }
@@ -241,6 +231,30 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
       mealText: dishInput.trim(),
       notesText: mealNotesInput.trim(),
     });
+  };
+
+  const handleDeleteMeal = (mealIndex) => {
+    const today = getTodayStr();
+    const nextEntries = (calories[today] || []).filter((_, index) => index !== mealIndex);
+    const nextCalories = { ...calories };
+
+    if (nextEntries.length > 0) {
+      nextCalories[today] = nextEntries;
+    } else {
+      delete nextCalories[today];
+    }
+
+    onUpdate({
+      ...userData,
+      calories: nextCalories,
+    });
+
+    setCalorieNotice({
+      tone: "success",
+      text: "Meal deleted.",
+    });
+    setCalorieResult(null);
+    setTimeout(() => setCalorieNotice(null), 2500);
   };
 
   const handleBodyProfileSave = (nextBodyProfile) => {
@@ -486,24 +500,49 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                   Today
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 overflow-hidden rounded-[22px] border border-slate-900/8 dark:border-white/10">
+                  <div className="grid grid-cols-[minmax(0,1.6fr)_auto_auto_auto] gap-3 bg-slate-900/5 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:bg-white/5 dark:text-slate-400">
+                    <span>Meal</span>
+                    <span>Cal</span>
+                    <span>Type</span>
+                    <span className="text-right">Action</span>
+                  </div>
                   {todayEntries.map((entry, index) => (
                     <div
-                      key={index}
-                      className="rounded-full border border-slate-900/8 bg-white/70 px-3 py-2 text-xs dark:border-white/10 dark:bg-white/6"
+                      key={`${entry.timestamp || index}-${entry.dish}`}
+                      className="grid grid-cols-[minmax(0,1.6fr)_auto_auto_auto] gap-3 border-t border-slate-900/8 bg-white/70 px-4 py-3 text-sm dark:border-white/10 dark:bg-white/6"
                     >
-                      <span className="text-slate-700 dark:text-slate-200">{entry.dish}</span>
-                      <span className="ml-2 font-semibold text-orange-600 dark:text-orange-300">
-                        {entry.calories} cal
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-slate-800 dark:text-slate-100">{entry.dish}</p>
+                        <div className="mt-1 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]">
+                          {entry.time && (
+                            <span className="text-slate-500 dark:text-slate-400">{entry.time}</span>
+                          )}
+                          {entry.usedPhoto && (
+                            <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-orange-600 dark:text-orange-300">
+                              Photo
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <span className="font-semibold text-orange-600 dark:text-orange-300">
+                        {entry.calories}
                       </span>
-                      <span className="ml-2 rounded-full bg-slate-900/6 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:bg-white/10 dark:text-slate-300">
+
+                      <span className="rounded-full bg-slate-900/6 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:bg-white/10 dark:text-slate-300">
                         {entry.source === "ai" ? "AI" : "Local"}
                       </span>
-                      {entry.usedPhoto && (
-                        <span className="ml-2 rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-orange-600 dark:text-orange-300">
-                          Photo
-                        </span>
-                      )}
+
+                      <div className="text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMeal(index)}
+                          className="rounded-full bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/16 dark:text-rose-300"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

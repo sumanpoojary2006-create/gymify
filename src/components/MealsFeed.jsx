@@ -80,64 +80,66 @@ export default function MealsFeed({ activeUser, data }) {
               </div>
 
               <div className="space-y-4 p-4">
-                {group.meals.map((meal) => (
-                  <article
-                    key={`${group.userName}-${meal.timestamp || meal.index}-${meal.dish}`}
-                    className="overflow-hidden rounded-[22px] border border-slate-900/8 bg-slate-50/70 dark:border-white/10 dark:bg-slate-900/35"
-                  >
-                    {meal.photoDataUrl && (
-                      <img
-                        src={meal.photoDataUrl}
-                        alt={meal.dish}
-                        className="h-44 w-full object-cover sm:h-52"
-                      />
-                    )}
+                <div className="overflow-hidden rounded-[22px] border border-slate-900/8 dark:border-white/10">
+                  <div className="grid grid-cols-[minmax(0,1.6fr)_auto_auto] gap-3 bg-slate-900/5 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:bg-white/5 dark:text-slate-400">
+                    <span>Meal</span>
+                    <span>Cal</span>
+                    <span>Type</span>
+                  </div>
 
-                    <div className="space-y-4 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="text-lg font-semibold text-slate-950 dark:text-white">{meal.dish}</h3>
-                          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            {meal.time || "Meal log"}
-                          </p>
+                  {group.meals.map((meal) => (
+                    <div
+                      key={`${group.userName}-${meal.timestamp || meal.index}-${meal.dish}`}
+                      className="border-t border-slate-900/8 bg-slate-50/70 dark:border-white/10 dark:bg-slate-900/35"
+                    >
+                      <div className="grid grid-cols-[minmax(0,1.6fr)_auto_auto] gap-3 px-4 py-3 text-sm">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-slate-900 dark:text-white">{meal.dish}</p>
+                          <div className="mt-1 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                            {meal.time && <span>{meal.time}</span>}
+                            {meal.userNote && <span className="truncate max-w-[180px]">Note: {meal.userNote}</span>}
+                          </div>
                         </div>
 
-                        <div className="text-right">
-                          <p className="text-lg font-semibold text-slate-950 dark:text-white">
-                            {meal.calories} cal
-                          </p>
-                          <div className="mt-1 flex flex-wrap justify-end gap-2">
-                            <span className="rounded-full bg-slate-900/6 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:bg-white/10 dark:text-slate-300">
-                              {meal.source === "ai" ? "AI" : "Local"}
+                        <span className="font-semibold text-slate-950 dark:text-white">{meal.calories}</span>
+
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <span className="rounded-full bg-slate-900/6 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:bg-white/10 dark:text-slate-300">
+                            {meal.source === "ai" ? "AI" : "Local"}
+                          </span>
+                          {meal.usedPhoto && (
+                            <span className="rounded-full bg-orange-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-orange-600 dark:text-orange-300">
+                              Photo
                             </span>
-                            {meal.usedPhoto && (
-                              <span className="rounded-full bg-orange-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-orange-600 dark:text-orange-300">
-                                Photo
-                              </span>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
 
-                      {meal.userNote && (
-                        <p className="text-sm text-slate-600 dark:text-slate-300">
-                          Note: {meal.userNote}
-                        </p>
+                      {meal.photoDataUrl && (
+                        <div className="px-4 pb-4">
+                          <img
+                            src={meal.photoDataUrl}
+                            alt={meal.dish}
+                            className="h-40 w-full rounded-2xl object-cover sm:h-48"
+                          />
+                        </div>
                       )}
 
                       {meal.notes.length > 0 && (
-                        <div className="rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 dark:border-white/10 dark:bg-white/5">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                            AI notes
-                          </p>
-                          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                            {meal.notes.join(" ")}
-                          </p>
+                        <div className="px-4 pb-4">
+                          <div className="rounded-2xl border border-slate-900/8 bg-white/70 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                              AI notes
+                            </p>
+                            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                              {meal.notes.join(" ")}
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>
-                  </article>
-                ))}
+                  ))}
+                </div>
               </div>
             </section>
           ))}
