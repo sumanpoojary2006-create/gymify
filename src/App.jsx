@@ -178,7 +178,6 @@ export default function App() {
     { id: "meals", label: "Meals", icon: "🍽️" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏆" },
     { id: "graph", label: "Graph", icon: "📈" },
-    { id: "profile", label: "Profile", icon: "👤" },
   ];
 
   if (!activeUser) {
@@ -259,6 +258,17 @@ export default function App() {
               >
                 {cloudSyncEnabled ? "Cloud sync" : "Local only"}
               </span>
+
+              <button
+                onClick={() => setActiveTab("profile")}
+                className={`rounded-full border px-3 py-2 text-xs font-semibold shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition ${
+                  activeTab === "profile"
+                    ? "border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950"
+                    : "border-slate-900/8 bg-white/80 text-slate-600 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                }`}
+              >
+                👤 Profile
+              </button>
 
               <button
                 onClick={() => setSelectedUser("")}
