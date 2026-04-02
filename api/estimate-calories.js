@@ -49,6 +49,47 @@ const CALORIE_RESPONSE_SCHEMA = {
   },
 };
 
+function parseImageDataUrl(imageDataUrl) {
+  const match = imageDataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!match) {
+    throw new Error("Unsupported image format. Please try a JPG or PNG photo.");
+  }
+
+  return {
+    mimeType: match[1],
+    base64: match[2],
+  };
+}
+
+async function uploadVisionFile({ apiKey, imageDataUrl }) {
+  const { mimeType, base64 } = parseImageDataUrl(imageDataUrl);
+  const buffer = Buffer.from(base64, "base64");
+  const extension = mimeType.includes("png")
+    ? "png"
+    : mimeType.includes("webp")
+      ? "webp"
+      : "jpg";
+
+  const formData = new FormData();
+  formData.append("purpose", "vision");
+  formData.append("file", new Blob([buffer], { type: mimeType }), `meal.${extension}`);
+
+  const fileResponse = await fetch("https://api.openai.com/v1/files", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: formData,
+  });
+
+  const filePayload = await fileResponse.json();
+  if (!fileResponse.ok) {
+    throw new Error(filePayload?.error?.message || "Photo upload failed.");
+  }
+
+  return filePayload.id;
+}
+
 function getResponseText(payload) {
   if (typeof payload?.output_text === "string" && payload.output_text.trim()) {
     return payload.output_text;
@@ -113,6 +154,10 @@ export default async function handler(request, response) {
   const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
   try {
+    const uploadedFileId = imageDataUrl
+      ? await uploadVisionFile({ apiKey, imageDataUrl })
+      : null;
+
     const openAiResponse = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
@@ -158,7 +203,7 @@ export default async function handler(request, response) {
                 ? [
                     {
                       type: "input_image",
-                      image_url: imageDataUrl,
+                      file_id: uploadedFileId,
                       detail: "low",
                     },
                   ]
