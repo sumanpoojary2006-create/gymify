@@ -159,6 +159,7 @@ export default async function handler(request, response) {
                     {
                       type: "input_image",
                       image_url: imageDataUrl,
+                      detail: "low",
                     },
                   ]
                 : []),

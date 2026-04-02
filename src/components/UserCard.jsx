@@ -32,6 +32,37 @@ function readFileAsDataUrl(file) {
   });
 }
 
+function loadImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not process that image."));
+    image.src = dataUrl;
+  });
+}
+
+async function optimizeImageForUpload(file) {
+  const originalDataUrl = await readFileAsDataUrl(file);
+  const image = await loadImage(originalDataUrl);
+
+  const maxDimension = 1280;
+  const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+  const targetWidth = Math.max(1, Math.round(image.width * scale));
+  const targetHeight = Math.max(1, Math.round(image.height * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Could not prepare the photo for upload.");
+  }
+
+  context.drawImage(image, 0, 0, targetWidth, targetHeight);
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
 export default function UserCard({ userData, darkMode, onStreakMilestone, onUpdate }) {
   const [weightInput, setWeightInput] = useState("");
   const [calorieInputMode, setCalorieInputMode] = useState("text");
@@ -144,11 +175,14 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
             ? `AI estimated ${result.total} calories from the meal photo.`
             : `AI estimated ${result.total} calories for this meal.`,
         };
-      } catch {
+      } catch (error) {
         if (!mealText) {
           setCalorieNotice({
             tone: "fallback",
-            text: "Photo-based calorie detection needs the AI endpoint. Add the OpenAI key in Vercel and try again.",
+            text:
+              error instanceof Error
+                ? error.message
+                : "Photo-based calorie detection could not be completed.",
           });
           return;
         }
@@ -200,7 +234,7 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
     if (!file) return;
 
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const dataUrl = await optimizeImageForUpload(file);
       setDishPhotoDataUrl(dataUrl);
       setDishPhotoName(file.name);
       setCalorieNotice({
