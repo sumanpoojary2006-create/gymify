@@ -297,11 +297,66 @@ export function getLatestWeight(weights) {
   return { date: dates[dates.length - 1], weight: weights[dates[dates.length - 1]] };
 }
 
+export function getWeightForDate(weights = {}, dateStr, fallbackWeight = "") {
+  const weightDates = Object.keys(weights).sort();
+  const eligibleDate = [...weightDates].reverse().find((weightDate) => weightDate <= dateStr);
+
+  if (eligibleDate) {
+    return weights[eligibleDate];
+  }
+
+  return fallbackWeight;
+}
+
+export function getOverallCalorieDeficitMetrics(userData) {
+  const calorieDates = Object.keys(userData.calories || {}).sort();
+  const fallbackWeight = userData.bodyProfile?.weightKg || getLatestWeight(userData.weights || {})?.weight || "";
+
+  if (calorieDates.length === 0) {
+    return {
+      deficit: 0,
+      surplus: 0,
+      trackedDays: 0,
+    };
+  }
+
+  return calorieDates.reduce(
+    (summary, dateStr) => {
+      const entries = userData.calories?.[dateStr] || [];
+      const intake = entries.reduce((sum, entry) => sum + (entry.calories || 0), 0);
+      const effectiveWeight = getWeightForDate(userData.weights || {}, dateStr, fallbackWeight);
+      const metrics = getFatLossTargetMetrics({
+        activity: userData.bodyProfile?.activity,
+        age: userData.bodyProfile?.age,
+        heightCm: userData.bodyProfile?.heightCm,
+        sex: userData.bodyProfile?.sex,
+        weightKg: effectiveWeight,
+        intake,
+      });
+
+      if (!metrics || entries.length === 0) {
+        return summary;
+      }
+
+      return {
+        deficit: summary.deficit + Math.max(metrics.targetIntake - intake, 0),
+        surplus: summary.surplus + Math.max(intake - metrics.targetIntake, 0),
+        trackedDays: summary.trackedDays + 1,
+      };
+    },
+    {
+      deficit: 0,
+      surplus: 0,
+      trackedDays: 0,
+    }
+  );
+}
+
 export function getLeaderboardScore(userData) {
   const totalGymDays = Object.values(userData.gymDays || {}).filter(Boolean).length;
   const streak = calculateStreak(userData.gymDays || {});
-  const deficitMetrics = getCalorieDeficitMetrics(userData);
-  return totalGymDays * 10 + streak + deficitMetrics.deficit;
+  const overallDeficitMetrics = getOverallCalorieDeficitMetrics(userData);
+  return totalGymDays * 10 + streak + overallDeficitMetrics.deficit;
 }
 
 export function getActivityMultiplier(activity) {
