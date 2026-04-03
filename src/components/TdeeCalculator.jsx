@@ -22,7 +22,7 @@ function getDeficitSummary(metrics) {
 
   if (difference > 0) {
     return {
-      label: `${difference} cal over today&apos;s cap`,
+      label: `${difference} cal over today's cap`,
       tone: "text-rose-700 dark:text-rose-400",
       chip: "border-rose-300/40 bg-rose-500/10 text-rose-700 dark:text-rose-300",
     };

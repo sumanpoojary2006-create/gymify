@@ -2,23 +2,19 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import WeightChart from "./WeightChart";
 import CalorieChart from "./CalorieChart";
-import BadgeDisplay from "./BadgeDisplay";
 import ProgressRing from "./ProgressRing";
 import TdeeCalculator from "./TdeeCalculator";
 import CalorieWarningPopup from "./CalorieWarningPopup";
+import CalorieThresholdGraph from "./CalorieThresholdGraph";
 import { getUserProfile } from "../data/userProfiles";
 import { estimateCaloriesWithAI } from "../utils/calorieEstimator";
 import {
   calculateBmi,
-  calculateStreak,
-  countTruthyDates,
   getFatLossTargetMetrics,
   getLatestWeight,
   getMonthAttendanceSummary,
-  getRecentDateStrings,
   getTodayCalories,
   getTodayStr,
-  computeBadges,
 } from "../utils/storage";
 
 const MotionDiv = motion.div;
@@ -78,11 +74,8 @@ export default function UserCard({ userData, darkMode, onUpdate }) {
 
   const { name, gymDays, weights, calories, bodyProfile } = userData;
   const profile = getUserProfile(name);
-  const streak = calculateStreak(gymDays);
   const latestWeight = getLatestWeight(weights);
-  const badges = computeBadges(userData);
   const todayCalories = getTodayCalories(calories);
-  const weeklyGymDays = countTruthyDates(gymDays, getRecentDateStrings(7));
   const monthAttendance = getMonthAttendanceSummary(gymDays);
   const fatLossMetrics = getFatLossTargetMetrics({
     activity: bodyProfile.activity,
@@ -92,31 +85,6 @@ export default function UserCard({ userData, darkMode, onUpdate }) {
     weightKg: latestWeight?.weight || bodyProfile.weightKg,
     intake: todayCalories,
   });
-  const remainingCalories = fatLossMetrics?.remainingCalories ?? null;
-
-  const dailyPaceSummary = !fatLossMetrics
-    ? {
-        title: "Set up your daily calorie cap",
-        text: "Open Health tools once and save age, height, sex, activity, and weight to unlock your fat-loss target.",
-        tone: "border-slate-900/8 bg-slate-900/4 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200",
-      }
-    : fatLossMetrics.isOverTarget
-      ? {
-          title: `${Math.abs(fatLossMetrics.remainingCalories)} cal over today&apos;s cap`,
-          text: "Keep the rest of the day light so you stay close to your weekly 1 kg pace.",
-          tone: "border-rose-300/40 bg-rose-500/10 text-rose-700 dark:text-rose-300",
-        }
-      : fatLossMetrics.isCloseToTarget
-        ? {
-            title: `${fatLossMetrics.remainingCalories} cal left today`,
-            text: "You’re close to your food limit for the day. Make the next meal small and protein-focused.",
-            tone: "border-amber-300/40 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-          }
-        : {
-            title: `${fatLossMetrics.remainingCalories} cal left on today’s plan`,
-            text: "You’re still inside your daily fat-loss target. Nice and steady.",
-            tone: "border-emerald-300/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-          };
 
   const handleWeightSubmit = (event) => {
     event.preventDefault();
@@ -355,64 +323,7 @@ export default function UserCard({ userData, darkMode, onUpdate }) {
       </div>
 
       <div className="space-y-4 p-5">
-        <div className={`rounded-[24px] border px-4 py-4 ${dailyPaceSummary.tone}`}>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-75">
-            Daily pace
-          </p>
-          <p className="mt-2 text-lg font-semibold">{dailyPaceSummary.title}</p>
-          <p className="mt-1 text-sm opacity-90">{dailyPaceSummary.text}</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-3 py-3 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-              Daily cap
-            </p>
-            <p className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
-              {fatLossMetrics ? `${fatLossMetrics.targetIntake} cal` : "Set up"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-3 py-3 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-              Left today
-            </p>
-            <p className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
-              {fatLossMetrics ? `${Math.max(remainingCalories, 0)} cal` : "—"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-3 py-3 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-              Streak
-            </p>
-            <p className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">🔥 {streak}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-3 py-3 dark:border-white/10 dark:bg-white/5">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-              Latest weight
-            </p>
-            <p className="mt-2 text-lg font-semibold text-slate-950 dark:text-white">
-              {latestWeight ? `${latestWeight.weight} kg` : "—"}
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-4 py-3 dark:border-white/10 dark:bg-white/5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                {monthAttendance.monthLabel}
-              </p>
-              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-white">
-                {monthAttendance.attendedDays} attendance marks in {monthAttendance.daysElapsed} tracked days
-              </p>
-            </div>
-            <span className="rounded-full border border-slate-900/8 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-              {weeklyGymDays} workouts this week
-            </span>
-          </div>
-        </div>
-
-        <BadgeDisplay badges={badges} />
+        <CalorieThresholdGraph current={todayCalories} target={fatLossMetrics?.targetIntake || 0} />
 
         <button
           onClick={() => setShowDetails(!showDetails)}
