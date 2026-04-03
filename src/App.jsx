@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import UserCard from "./components/UserCard";
+import GymCalendar from "./components/GymCalendar";
 import Leaderboard from "./components/Leaderboard";
 import MealsFeed from "./components/MealsFeed";
 import ProfileSection from "./components/ProfileSection";
@@ -8,15 +9,14 @@ import WorkoutHelperModal from "./components/WorkoutHelperModal";
 import StreakPopup from "./components/StreakPopup";
 import ProfileLogin from "./components/ProfileLogin";
 import {
+  calculateStreak,
   createUserData,
   loadData,
   saveData,
   normalizeData,
   getUserNames,
-  getMonthAttendanceSummary,
   getMonthLabel,
   isRegisteredUser,
-  getTodayStr,
 } from "./utils/storage";
 import { getUserProfile } from "./data/userProfiles";
 import { isFirebaseReady, saveToFirebase, subscribeToFirebase } from "./utils/firebase";
@@ -165,16 +165,31 @@ export default function App() {
     [data]
   );
 
-  const today = getTodayStr();
-  const users = Object.values(visibleData);
-  const todayCheckIns = users.filter((user) => user.gymDays[today]).length;
-  const todayMealLogs = users.reduce((count, user) => count + (user.calories[today] || []).length, 0);
-  const totalMonthlyAttendance = users.reduce(
-    (count, user) => count + getMonthAttendanceSummary(user.gymDays).attendedDays,
-    0
-  );
   const currentMonthLabel = getMonthLabel();
   const selectedProfile = activeUser ? getUserProfile(activeUser) : null;
+  const activeUserData = activeUser ? data[activeUser] : null;
+
+  const handleActiveUserGymToggle = useCallback(
+    (dateStr) => {
+      if (!activeUser || !activeUserData) return;
+
+      const nextGymDays = { ...activeUserData.gymDays };
+      if (nextGymDays[dateStr]) {
+        delete nextGymDays[dateStr];
+      } else {
+        nextGymDays[dateStr] = true;
+      }
+
+      handleUserUpdate(activeUser, { ...activeUserData, gymDays: nextGymDays });
+
+      const nextStreak = calculateStreak(nextGymDays);
+      const currentStreak = calculateStreak(activeUserData.gymDays);
+      if (nextStreak > 0 && nextStreak % 6 === 0 && nextStreak > currentStreak) {
+        handleStreakMilestone(activeUser, nextStreak);
+      }
+    },
+    [activeUser, activeUserData, handleStreakMilestone, handleUserUpdate]
+  );
 
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: "📊" },
@@ -323,49 +338,31 @@ export default function App() {
       </header>
 
       <main className="relative z-10 mx-auto flex max-w-5xl flex-col gap-5 px-4 py-5 pb-28 md:pb-10">
-        <section className="rounded-[28px] border border-white/55 bg-white/82 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/72">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                Calendar Attendance
-              </p>
-              <h2 className="mt-2 font-display text-2xl font-semibold text-slate-950 dark:text-white">
-                Simple shared attendance tracking for your group
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Track attendance day by day on a real calendar, while meals and leaderboard stats
-                stay synced for everyone who has signed up.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 sm:w-auto">
-              <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-4 py-3 dark:border-white/10 dark:bg-white/5">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Today</p>
-                <p className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
-                  {todayCheckIns}/{users.length}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">checked in</p>
-              </div>
-              <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-4 py-3 dark:border-white/10 dark:bg-white/5">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">This month</p>
-                <p className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
-                  {totalMonthlyAttendance}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">attendance marks</p>
-              </div>
-              <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-4 py-3 dark:border-white/10 dark:bg-white/5">
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Meals</p>
-                <p className="mt-1 text-xl font-semibold text-slate-950 dark:text-white">
-                  {todayMealLogs}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">meals logged today</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {activeTab === "dashboard" ? (
           <section className="grid grid-cols-1 gap-4">
+            <section className="rounded-[28px] border border-white/55 bg-white/82 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/72">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                    Attendance
+                  </p>
+                  <h2 className="mt-2 font-display text-2xl font-semibold text-slate-950 dark:text-white">
+                    {currentMonthLabel}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Mark today here. Past days stay visible so your month is easy to scan at a glance.
+                  </p>
+                </div>
+                <span className="inline-flex rounded-full border border-slate-900/8 bg-slate-900/4 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                  {selectedProfile ? `${selectedProfile.emoji} ${activeUser}` : activeUser}
+                </span>
+              </div>
+
+              {activeUserData && (
+                <GymCalendar gymDays={activeUserData.gymDays} onToggle={handleActiveUserGymToggle} />
+              )}
+            </section>
+
             <UserCard
               key={activeUser}
               userData={data[activeUser]}

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import GymCalendar from "./GymCalendar";
 import WeightChart from "./WeightChart";
 import CalorieChart from "./CalorieChart";
 import BadgeDisplay from "./BadgeDisplay";
@@ -62,7 +61,7 @@ async function optimizeImageForUpload(file) {
   return canvas.toDataURL("image/jpeg", 0.82);
 }
 
-export default function UserCard({ userData, darkMode, onStreakMilestone, onUpdate }) {
+export default function UserCard({ userData, darkMode, onUpdate }) {
   const [weightInput, setWeightInput] = useState("");
   const [dishInput, setDishInput] = useState("");
   const [mealNotesInput, setMealNotesInput] = useState("");
@@ -82,22 +81,6 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
   const todayCalories = getTodayCalories(calories);
   const weeklyGymDays = countTruthyDates(gymDays, getRecentDateStrings(7));
   const monthAttendance = getMonthAttendanceSummary(gymDays);
-
-  const handleGymToggle = (dateStr) => {
-    const newGymDays = { ...gymDays };
-    if (newGymDays[dateStr]) {
-      delete newGymDays[dateStr];
-    } else {
-      newGymDays[dateStr] = true;
-    }
-
-    onUpdate({ ...userData, gymDays: newGymDays });
-
-    const newStreak = calculateStreak(newGymDays);
-    if (newStreak > 0 && newStreak % 6 === 0 && newStreak > streak) {
-      onStreakMilestone(newStreak);
-    }
-  };
 
   const handleWeightSubmit = (event) => {
     event.preventDefault();
@@ -360,16 +343,6 @@ export default function UserCard({ userData, darkMode, onStreakMilestone, onUpda
           exit={{ height: 0, opacity: 0 }}
           className="space-y-4 px-5 pb-5"
         >
-          <div className="soft-panel rounded-[24px] p-4">
-            <h4 className="font-display text-base font-semibold text-slate-950 dark:text-white">
-              Gym attendance
-            </h4>
-            <p className="mb-3 mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Only today can be marked. Past attendance stays visible but locked.
-            </p>
-            <GymCalendar gymDays={gymDays} onToggle={handleGymToggle} />
-          </div>
-
           <div className="soft-panel rounded-[24px] p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
