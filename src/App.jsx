@@ -6,6 +6,7 @@ import Leaderboard from "./components/Leaderboard";
 import MealsFeed from "./components/MealsFeed";
 import ProfileSection from "./components/ProfileSection";
 import WorkoutHelperModal from "./components/WorkoutHelperModal";
+import AttendanceCelebrationPopup from "./components/AttendanceCelebrationPopup";
 import StreakPopup from "./components/StreakPopup";
 import ProfileLogin from "./components/ProfileLogin";
 import {
@@ -16,6 +17,7 @@ import {
   normalizeData,
   getUserNames,
   getMonthLabel,
+  getTodayStr,
   isRegisteredUser,
 } from "./utils/storage";
 import { getUserProfile } from "./data/userProfiles";
@@ -30,6 +32,7 @@ export default function App() {
   const [data, setData] = useState(loadData);
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("lean-challenge-dark") === "true");
   const [streakPopup, setStreakPopup] = useState(null);
+  const [attendancePopup, setAttendancePopup] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showWorkoutHelper, setShowWorkoutHelper] = useState(false);
   const [selectedUser, setSelectedUser] = useState(() => {
@@ -166,6 +169,7 @@ export default function App() {
   );
 
   const currentMonthLabel = getMonthLabel();
+  const todayStr = getTodayStr();
   const selectedProfile = activeUser ? getUserProfile(activeUser) : null;
   const activeUserData = activeUser ? data[activeUser] : null;
 
@@ -174,6 +178,7 @@ export default function App() {
       if (!activeUser || !activeUserData) return;
 
       const nextGymDays = { ...activeUserData.gymDays };
+      const wasMarked = !!nextGymDays[dateStr];
       if (nextGymDays[dateStr]) {
         delete nextGymDays[dateStr];
       } else {
@@ -182,13 +187,20 @@ export default function App() {
 
       handleUserUpdate(activeUser, { ...activeUserData, gymDays: nextGymDays });
 
+      if (!wasMarked && dateStr === todayStr) {
+        setAttendancePopup({
+          name: activeUser,
+          message: `Attendance marked for ${currentMonthLabel}. Nice work showing up today.`,
+        });
+      }
+
       const nextStreak = calculateStreak(nextGymDays);
       const currentStreak = calculateStreak(activeUserData.gymDays);
       if (nextStreak > 0 && nextStreak % 6 === 0 && nextStreak > currentStreak) {
         handleStreakMilestone(activeUser, nextStreak);
       }
     },
-    [activeUser, activeUserData, handleStreakMilestone, handleUserUpdate]
+    [activeUser, activeUserData, currentMonthLabel, handleStreakMilestone, handleUserUpdate, todayStr]
   );
 
   const tabs = [
@@ -419,6 +431,15 @@ export default function App() {
           streak={streakPopup.streak}
           userName={streakPopup.name}
           onClose={closeStreakPopup}
+        />
+      )}
+
+      {attendancePopup && (
+        <AttendanceCelebrationPopup
+          show={!!attendancePopup}
+          userName={attendancePopup.name}
+          message={attendancePopup.message}
+          onClose={() => setAttendancePopup(null)}
         />
       )}
 

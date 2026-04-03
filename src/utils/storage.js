@@ -1,6 +1,9 @@
 const STORAGE_KEY = "lean-challenge-60day";
 const TOTAL_DAYS = 60;
 const START_DATE = "2026-04-02"; // Challenge start date
+const WEEKLY_WEIGHT_LOSS_GOAL_KG = 1;
+const CALORIES_PER_KG = 7700;
+const CLOSE_TO_TARGET_BUFFER = 150;
 
 function formatDateKey(date) {
   const safeDate = new Date(date);
@@ -336,6 +339,47 @@ export function calculateTdee({ activity, age, heightCm, sex, weightKg }) {
   };
 }
 
+export function getDailyDeficitGoalCalories() {
+  return Math.round((WEEKLY_WEIGHT_LOSS_GOAL_KG * CALORIES_PER_KG) / 7);
+}
+
+export function getRecommendedCalorieFloor(sex) {
+  return sex === "female" ? 1200 : 1500;
+}
+
+export function getFatLossTargetMetrics({ activity, age, heightCm, sex, weightKg, intake = 0 }) {
+  const tdeeResult = calculateTdee({ activity, age, heightCm, sex, weightKg });
+
+  if (!tdeeResult) {
+    return null;
+  }
+
+  const dailyDeficitGoal = getDailyDeficitGoalCalories();
+  const calorieFloor = getRecommendedCalorieFloor(sex);
+  const rawTargetIntake = tdeeResult.tdee - dailyDeficitGoal;
+  const targetIntake = Math.max(rawTargetIntake, calorieFloor);
+  const effectiveDeficitGoal = Math.max(tdeeResult.tdee - targetIntake, 0);
+  const remainingCalories = Math.round(targetIntake - intake);
+  const isCloseToTarget = remainingCalories <= CLOSE_TO_TARGET_BUFFER && remainingCalories >= 0;
+  const isOverTarget = remainingCalories < 0;
+
+  return {
+    bmr: tdeeResult.bmr,
+    tdee: tdeeResult.tdee,
+    weeklyGoalKg: WEEKLY_WEIGHT_LOSS_GOAL_KG,
+    dailyDeficitGoal,
+    effectiveDeficitGoal,
+    calorieFloor,
+    targetIntake,
+    remainingCalories,
+    closeBuffer: CLOSE_TO_TARGET_BUFFER,
+    isCloseToTarget,
+    isOverTarget,
+    intake: Math.round(intake),
+    floorAdjusted: rawTargetIntake < calorieFloor,
+  };
+}
+
 export function calculateBmi({ heightCm, weightKg }) {
   const parsedHeight = Number(heightCm);
   const parsedWeight = Number(weightKg);
@@ -362,33 +406,38 @@ export function calculateBmi({ heightCm, weightKg }) {
 export function getCalorieDeficitMetrics(userData) {
   const latestWeight = getLatestWeight(userData.weights || {});
   const effectiveWeight = latestWeight?.weight || userData.bodyProfile?.weightKg;
-  const tdeeResult = calculateTdee({
+  const todayEntries = getTodayCalorieEntries(userData.calories || {});
+  const intake = todayEntries.reduce((sum, entry) => sum + (entry.calories || 0), 0);
+  const fatLossMetrics = getFatLossTargetMetrics({
     activity: userData.bodyProfile?.activity,
     age: userData.bodyProfile?.age,
     heightCm: userData.bodyProfile?.heightCm,
     sex: userData.bodyProfile?.sex,
     weightKg: effectiveWeight,
+    intake,
   });
-  const todayEntries = getTodayCalorieEntries(userData.calories || {});
-  const intake = todayEntries.reduce((sum, entry) => sum + (entry.calories || 0), 0);
 
-  if (!tdeeResult || todayEntries.length === 0) {
+  if (!fatLossMetrics || todayEntries.length === 0) {
     return {
-      tdee: tdeeResult?.tdee || null,
+      tdee: fatLossMetrics?.tdee || null,
+      targetIntake: fatLossMetrics?.targetIntake || null,
       intake,
       deficit: 0,
       surplus: 0,
+      remainingCalories: fatLossMetrics?.remainingCalories ?? null,
       hasCalorieLog: todayEntries.length > 0,
     };
   }
 
-  const difference = Math.round(tdeeResult.tdee - intake);
+  const difference = Math.round(fatLossMetrics.targetIntake - intake);
 
   return {
-    tdee: tdeeResult.tdee,
+    tdee: fatLossMetrics.tdee,
+    targetIntake: fatLossMetrics.targetIntake,
     intake,
     deficit: Math.max(difference, 0),
     surplus: Math.max(-difference, 0),
+    remainingCalories: fatLossMetrics.remainingCalories,
     hasCalorieLog: true,
   };
 }

@@ -94,9 +94,179 @@ function getExerciseTheme(name, split) {
   };
 }
 
+function getPoseSpec(name, split) {
+  const lowerName = name.toLowerCase();
+
+  if (
+    lowerName.includes("squat") ||
+    lowerName.includes("lunge") ||
+    lowerName.includes("leg press") ||
+    lowerName.includes("leg extension") ||
+    lowerName.includes("calf")
+  ) {
+    return {
+      pose: "legs",
+      category: "Lower body",
+      headline: "Drive through heels",
+    };
+  }
+
+  if (lowerName.includes("deadlift") || lowerName.includes("rdl")) {
+    return {
+      pose: "hinge",
+      category: "Posterior chain",
+      headline: "Hip hinge focus",
+    };
+  }
+
+  if (
+    lowerName.includes("row") ||
+    lowerName.includes("pull") ||
+    lowerName.includes("lat") ||
+    lowerName.includes("curl") ||
+    lowerName.includes("rear delt") ||
+    lowerName.includes("face pull")
+  ) {
+    return {
+      pose: "pull",
+      category: "Back + biceps",
+      headline: "Pull with elbows",
+    };
+  }
+
+  if (
+    lowerName.includes("press") ||
+    lowerName.includes("push") ||
+    lowerName.includes("dip") ||
+    lowerName.includes("tricep") ||
+    lowerName.includes("shoulder") ||
+    lowerName.includes("chest")
+  ) {
+    return {
+      pose: "push",
+      category: "Chest + shoulders",
+      headline: "Press with control",
+    };
+  }
+
+  if (
+    split === "weight-loss" ||
+    lowerName.includes("swing") ||
+    lowerName.includes("bike") ||
+    lowerName.includes("run") ||
+    lowerName.includes("rope") ||
+    lowerName.includes("burpee") ||
+    lowerName.includes("jump")
+  ) {
+    return {
+      pose: "cardio",
+      category: "Conditioning",
+      headline: "Keep moving",
+    };
+  }
+
+  return {
+    pose: "neutral",
+    category: split === "weight-loss" ? "Conditioning" : "Gym work",
+    headline: "Smooth tempo",
+  };
+}
+
+function getHumanPoseMarkup(pose, accent) {
+  const shared = `stroke="${accent}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
+  const skin = "#f8d4bd";
+  const shorts = "#0f172a";
+
+  if (pose === "push") {
+    return `
+      <circle cx="80" cy="46" r="12" fill="${skin}" />
+      <path d="M80 58 L80 92" ${shared} />
+      <path d="M80 66 L56 50" ${shared} />
+      <path d="M56 50 L42 32" ${shared} />
+      <path d="M80 66 L104 50" ${shared} />
+      <path d="M104 50 L118 32" ${shared} />
+      <path d="M74 90 L66 122" ${shared} />
+      <path d="M86 90 L94 122" ${shared} />
+      <circle cx="38" cy="28" r="8" fill="${accent}" />
+      <circle cx="122" cy="28" r="8" fill="${accent}" />
+      <rect x="68" y="74" width="24" height="18" rx="8" fill="${shorts}" />
+    `;
+  }
+
+  if (pose === "pull") {
+    return `
+      <circle cx="86" cy="48" r="12" fill="${skin}" />
+      <path d="M86 60 L76 92" ${shared} />
+      <path d="M76 70 L48 78" ${shared} />
+      <path d="M48 78 L36 72" ${shared} />
+      <path d="M76 74 L102 78" ${shared} />
+      <path d="M102 78 L118 72" ${shared} />
+      <path d="M76 92 L66 124" ${shared} />
+      <path d="M76 92 L96 122" ${shared} />
+      <rect x="66" y="74" width="22" height="18" rx="8" fill="${shorts}" />
+      <rect x="28" y="68" width="96" height="8" rx="4" fill="${accent}" fill-opacity="0.22" />
+    `;
+  }
+
+  if (pose === "legs") {
+    return `
+      <circle cx="80" cy="46" r="12" fill="${skin}" />
+      <path d="M80 58 L80 88" ${shared} />
+      <path d="M80 68 L52 70" ${shared} />
+      <path d="M80 68 L108 70" ${shared} />
+      <path d="M80 88 L58 106" ${shared} />
+      <path d="M58 106 L48 128" ${shared} />
+      <path d="M80 88 L102 106" ${shared} />
+      <path d="M102 106 L112 128" ${shared} />
+      <rect x="68" y="72" width="24" height="18" rx="8" fill="${shorts}" />
+    `;
+  }
+
+  if (pose === "hinge") {
+    return `
+      <circle cx="92" cy="46" r="12" fill="${skin}" />
+      <path d="M92 58 L74 88" ${shared} />
+      <path d="M78 72 L54 86" ${shared} />
+      <path d="M78 72 L102 86" ${shared} />
+      <path d="M74 88 L66 124" ${shared} />
+      <path d="M74 88 L98 122" ${shared} />
+      <rect x="64" y="72" width="22" height="18" rx="8" fill="${shorts}" />
+      <rect x="44" y="86" width="68" height="8" rx="4" fill="${accent}" />
+      <circle cx="40" cy="90" r="8" fill="${accent}" />
+      <circle cx="116" cy="90" r="8" fill="${accent}" />
+    `;
+  }
+
+  if (pose === "cardio") {
+    return `
+      <circle cx="78" cy="46" r="12" fill="${skin}" />
+      <path d="M78 58 L80 88" ${shared} />
+      <path d="M78 68 L56 58" ${shared} />
+      <path d="M78 68 L98 52" ${shared} />
+      <path d="M80 88 L62 102" ${shared} />
+      <path d="M62 102 L48 126" ${shared} />
+      <path d="M80 88 L98 100" ${shared} />
+      <path d="M98 100 L116 92" ${shared} />
+      <rect x="68" y="72" width="24" height="18" rx="8" fill="${shorts}" />
+      <path d="M28 122 C48 108 60 116 74 110" stroke="${accent}" stroke-width="4" stroke-linecap="round" opacity="0.35" />
+    `;
+  }
+
+  return `
+    <circle cx="80" cy="46" r="12" fill="${skin}" />
+    <path d="M80 58 L80 92" ${shared} />
+    <path d="M80 66 L56 74" ${shared} />
+    <path d="M80 66 L104 74" ${shared} />
+    <path d="M80 92 L66 124" ${shared} />
+    <path d="M80 92 L94 124" ${shared} />
+    <rect x="68" y="74" width="24" height="18" rx="8" fill="${shorts}" />
+  `;
+}
+
 function getExerciseImageDataUrl(name, split) {
   const theme = getExerciseTheme(name, split);
-  const title = name.length > 26 ? `${name.slice(0, 26)}...` : name;
+  const spec = getPoseSpec(name, split);
+  const title = name.length > 24 ? `${name.slice(0, 24)}...` : name;
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none">
       <defs>
@@ -106,16 +276,13 @@ function getExerciseImageDataUrl(name, split) {
         </linearGradient>
       </defs>
       <rect width="160" height="160" rx="28" fill="url(#bg)" />
-      <circle cx="122" cy="36" r="24" fill="${theme.accent}" fill-opacity="0.14" />
-      <circle cx="38" cy="126" r="30" fill="${theme.accent}" fill-opacity="0.1" />
-      <rect x="28" y="60" width="104" height="12" rx="6" fill="${theme.accent}" />
-      <rect x="18" y="50" width="10" height="32" rx="4" fill="${theme.accent}" />
-      <rect x="132" y="50" width="10" height="32" rx="4" fill="${theme.accent}" />
-      <rect x="34" y="52" width="8" height="28" rx="4" fill="${theme.accent}" fill-opacity="0.75" />
-      <rect x="118" y="52" width="8" height="28" rx="4" fill="${theme.accent}" fill-opacity="0.75" />
-      <text x="20" y="28" fill="${theme.accent}" font-family="Arial, sans-serif" font-size="14" font-weight="700" letter-spacing="1.8">${theme.category}</text>
-      <text x="20" y="118" fill="#0f172a" font-family="Arial, sans-serif" font-size="15" font-weight="700">${title}</text>
-      <text x="20" y="138" fill="#475569" font-family="Arial, sans-serif" font-size="11">AI workout visual</text>
+      <circle cx="122" cy="34" r="22" fill="${theme.accent}" fill-opacity="0.12" />
+      <circle cx="34" cy="130" r="28" fill="${theme.accent}" fill-opacity="0.1" />
+      <rect x="16" y="108" width="128" height="34" rx="16" fill="#ffffff" fill-opacity="0.82" />
+      <text x="18" y="28" fill="${theme.accent}" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="1.6">${spec.category.toUpperCase()}</text>
+      ${getHumanPoseMarkup(spec.pose, theme.accent)}
+      <text x="18" y="124" fill="#0f172a" font-family="Arial, sans-serif" font-size="14" font-weight="700">${title}</text>
+      <text x="18" y="142" fill="#475569" font-family="Arial, sans-serif" font-size="11">${spec.headline}</text>
     </svg>
   `;
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { calculateBmi, calculateTdee } from "../utils/storage";
+import { calculateBmi, getFatLossTargetMetrics } from "../utils/storage";
 
 const activityOptions = [
   { value: "sedentary", label: "Sedentary" },
@@ -9,12 +9,12 @@ const activityOptions = [
   { value: "athlete", label: "Athlete" },
 ];
 
-function getDeficitSummary(tdee, intake) {
-  const difference = Math.round(intake - tdee);
+function getDeficitSummary(metrics) {
+  const difference = Math.round(metrics.intake - metrics.targetIntake);
 
   if (difference < 0) {
     return {
-      label: `${Math.abs(difference)} cal under target`,
+      label: `${Math.abs(difference)} cal below your fat-loss cap`,
       tone: "text-emerald-700 dark:text-emerald-400",
       chip: "border-emerald-300/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     };
@@ -22,14 +22,14 @@ function getDeficitSummary(tdee, intake) {
 
   if (difference > 0) {
     return {
-      label: `Surplus of ${difference} cal`,
+      label: `${difference} cal over today&apos;s cap`,
       tone: "text-rose-700 dark:text-rose-400",
       chip: "border-rose-300/40 bg-rose-500/10 text-rose-700 dark:text-rose-300",
     };
   }
 
   return {
-    label: "Right at maintenance",
+    label: "Right on your fat-loss target",
     tone: "text-slate-700 dark:text-slate-300",
     chip: "border-slate-300/40 bg-slate-500/10 text-slate-700 dark:text-slate-300",
   };
@@ -54,11 +54,12 @@ export default function TdeeCalculator({
     heightCm: formState.heightCm,
     weightKg: effectiveWeight,
   });
-  const result = calculateTdee({
+  const result = getFatLossTargetMetrics({
     ...formState,
     weightKg: effectiveWeight,
+    intake: todayCalories,
   });
-  const deficitSummary = result ? getDeficitSummary(result.tdee, todayCalories) : null;
+  const deficitSummary = result ? getDeficitSummary(result) : null;
 
   return (
     <div className="soft-panel rounded-[24px] p-4">
@@ -145,15 +146,15 @@ export default function TdeeCalculator({
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-4 py-4 text-center dark:border-white/10 dark:bg-white/5">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-              BMR
+              Maintenance
             </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">{result.bmr}</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">{result.tdee}</p>
           </div>
           <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-4 py-4 text-center dark:border-white/10 dark:bg-white/5">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-              TDEE
+              Daily cap
             </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">{result.tdee}</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-white">{result.targetIntake}</p>
           </div>
           <div className="rounded-2xl border border-slate-900/8 bg-slate-900/4 px-4 py-4 text-center dark:border-white/10 dark:bg-white/5">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
@@ -195,12 +196,20 @@ export default function TdeeCalculator({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className={`text-sm font-semibold ${deficitSummary.tone}`}>{deficitSummary.label}</p>
             <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${deficitSummary.chip}`}>
-              Goal check
+              1 kg / week pace
             </span>
           </div>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Based on today&apos;s logged calories versus estimated maintenance using the most recent
-            logged weight. This is a helpful daily check, not a medical diagnosis.
+            This uses your saved profile plus latest weight to build a daily calorie cap for a
+            roughly 1 kg per week fat-loss pace. It&apos;s a practical guide, not medical advice.
+          </p>
+          {result.floorAdjusted && (
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              Your target was held above a basic safety floor, so the full 1 kg/week cut is softened here.
+            </p>
+          )}
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Maintenance: {result.tdee} cal. Suggested deficit: {result.effectiveDeficitGoal} cal.
           </p>
         </div>
       )}
